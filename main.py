@@ -13,7 +13,7 @@ for k, v in imgs_dict.items():
 
 print('-------------------')
 target_path = 'search_pic'
-target_imgs_dict = {'search_pic/test.jpg': read_image(target_path + '/test.jpg')}
+target_imgs_dict = {r'search_pic\test.jpg': read_image(target_path + r'\test.jpg')}
 
 search_imgs(target_imgs_dict, imgs_dict)
 
