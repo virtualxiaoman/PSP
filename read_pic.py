@@ -1,3 +1,4 @@
+import os
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -24,6 +25,7 @@ def read_image(img_path, gray_pic=False, show_details=False):
         # img_gbr = cv2.imread(img_path)
         img_gbr = cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), -1)
         img = cv2.cvtColor(img_gbr, cv2.COLOR_BGR2RGB)
+
     if show_details:
         print(img.shape)
         if gray_pic:
@@ -34,7 +36,7 @@ def read_image(img_path, gray_pic=False, show_details=False):
         plt.close()
     return img
 
-def read_imgs(path):
+def read_imgs(path, gray_pic=False, show_details=False):
     """
     读取文件夹下的所有图片
     [使用示例]：
@@ -42,11 +44,17 @@ def read_imgs(path):
         imgs = read_imgs(path)
         print(len(imgs))
     :param path: 文件夹路径
+    :param gray_pic: 是否读取灰度图像
+    :param show_details: 是否输出图片的shape以及显示图片
     :return: imgs_dict: 图像数组字典，key是图片的绝对路径，value是图片数组
     """
-    import os
+    # 检查path是否存在
+    if not os.path.exists(path):
+        print(f"路径不存在：{path}")
+        return -1
+
     # imgs = []
-    imgs_dict = {}
+    imgs_dict = {}  # 存放读取到的所有图片，key是图片的绝对路径，value是图片数组
 
     # os.walk()返回一个三元组，分别是：当前路径，当前路径下的文件夹，当前路径下的文件
     for root, dirs, files in os.walk(path):
@@ -56,12 +64,11 @@ def read_imgs(path):
         for file in files:
             if file.endswith('.jpg') or file.endswith('.png') or file.endswith('.jpeg'):
 
-                print("相对路径", os.path.join(root, file))
-                print("绝对路径", os.path.abspath(os.path.join(root, file)))
+                # print("相对路径", os.path.join(root, file))
+                # print("绝对路径", os.path.abspath(os.path.join(root, file)))
 
                 img_path = os.path.join(root, file)
-                img = read_image(img_path, show_details=False, gray_pic=False)
-                # imgs.append(img)
+                img = read_image(img_path, gray_pic=gray_pic, show_details=show_details)
                 imgs_dict[os.path.abspath(img_path)] = img
 
     return imgs_dict
