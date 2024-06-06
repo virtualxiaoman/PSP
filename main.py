@@ -1,30 +1,26 @@
-import cv2
-import numpy as np
-import matplotlib.pyplot as plt
 import os
 
-from read_pic import read_imgs, read_image
-from search_pic import SearchPic, CompressPic, DomainReducer
+from PSP.read_pic import read_imgs, read_image
+from PSP.search_pic import SearchPic, CompressPic, DomainReducer
 
 path = 'input'
 path = r'F:\图片存储 Picture\blue archive'
 imgs_dict = read_imgs(path)
-for k, v in imgs_dict.items():
-    print(k, v.shape)
+# for k, v in imgs_dict.items():
+#     print(k, v.shape)
 print('-------------------')
 
 
 
-
 # print('-------------------')
-target_path = 'search_pic'
-target_imgs_dict = {r'search_pic\阿洛娜_原图.jpg': read_image(target_path + r'\阿洛娜_原图.jpg'),
-                    r'search_pic\阿洛娜_局部.jpg': read_image(target_path + r'\阿洛娜_局部.jpg'),
-                    r'search_pic\阿洛娜_水印.png': read_image(target_path + r'\阿洛娜_水印.png'),
-                    r'search_pic\阿洛娜_比较糊.png': read_image(target_path + r'\阿洛娜_比较糊.png'),
-                    r'search_pic\阿洛娜_图片被修改.png': read_image(target_path + r'\阿洛娜_图片被修改.png'),
-                    r'search_pic\阿洛娜_网图.jpg': read_image(target_path + r'\阿洛娜_网图.jpg')}
-target_imgs_dict = {r'search_pic\阿洛娜_网图.jpg': read_image(target_path + r'\阿洛娜_网图.jpg')}
+target_path = 'search'
+target_imgs_dict = {r'search\阿洛娜_原图.jpg': read_image(target_path + r'\阿洛娜_原图.jpg'),
+                    r'search\阿洛娜_局部.jpg': read_image(target_path + r'\阿洛娜_局部.jpg'),
+                    r'search\阿洛娜_水印.png': read_image(target_path + r'\阿洛娜_水印.png'),
+                    r'search\阿洛娜_比较糊.png': read_image(target_path + r'\阿洛娜_比较糊.png'),
+                    r'search\阿洛娜_图片被修改.png': read_image(target_path + r'\阿洛娜_图片被修改.png'),
+                    r'search\阿洛娜_网图.jpg': read_image(target_path + r'\阿洛娜_网图.jpg')}
+target_imgs_dict = {r'search\阿洛娜_网图.jpg': read_image(target_path + r'\阿洛娜_网图.jpg')}
 
 
 cp_s = CompressPic(imgs_dict)
@@ -35,7 +31,8 @@ imgs1_t = cp_t.img_1pixel
 print("\n"*5)
 print("----------减小搜索域---------")
 dr = DomainReducer()
-imgs1_s = dr.reduce_domain(imgs1_t, imgs1_s)
+imgs1_s = dr.search_imgs(imgs1_t, imgs1_s, search_type='similar')
+
 
 # 对比imgs1_s与imgs_dict，依据imgs_dict里的key，选择imgs_dict里的value相同的，将这些图片的路径存入imgs1_s_origin里
 
@@ -50,17 +47,14 @@ imgs1_s_origin = {}
 for target_key in target_imgs_dict.keys():
     # 标准化 target_key
     normalized_target_key = os.path.normpath(target_key)
-
     # 查找 imgs1_s 中是否存在标准化的 target_key
     if normalized_target_key in map(os.path.normpath, imgs1_s.keys()):
         # 获取 imgs1_s 中对应的 value (待搜索的图片路径列表)
         search_image_paths = imgs1_s[normalized_target_key]
-
         # 遍历待搜索的图片路径列表
         for search_image_path in search_image_paths:
             # 标准化 search_image_path
             normalized_search_image_path = os.path.normpath(search_image_path)
-
             # 查找 imgs_dict 中是否存在标准化的 search_image_path
             for key, value in imgs_dict.items():
                 if os.path.normpath(key) == normalized_search_image_path:
@@ -85,13 +79,15 @@ import time
 start1 = time.time()
 # 搜索图片
 psp = SearchPic()
-psp.search_imgs(target_imgs_dict, imgs1_s_origin)
+psp.search_imgs(target_imgs_dict, imgs1_s_origin, search_type='local')
 end1 = time.time()
+psp.log_result()
 
 
 start = time.time()
-psp.search_imgs(target_imgs_dict, imgs_dict)
+psp.search_imgs(target_imgs_dict, imgs_dict, search_type='local')
 end = time.time()
+psp.log_result()
 print("DR算法耗时：", end1 - start1)
 print("传统算法耗时：", end - start)
 

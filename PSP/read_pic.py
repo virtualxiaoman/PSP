@@ -15,7 +15,7 @@ def read_image(img_path, gray_pic=False, show_details=False):
     :param img_path: 图像路径
     :param gray_pic: 是否读取灰度图像
     :param show_details: 是否输出图片的shape以及显示图片
-    :return: 图像数组，类型为np.ndarray。大小是(H, W, 3)或(H, W)
+    :return: img, 图像数组，类型为np.ndarray。大小是(H, W, 3)或(H, W)
     """
     if gray_pic:
         # img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)

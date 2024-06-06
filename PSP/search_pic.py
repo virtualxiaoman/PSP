@@ -1,48 +1,72 @@
 import numpy as np
 import cv2
 
-
-# todo 待重构
-# # base_search.py
-# class BaseSearch:
-#     def _search_img(self, image, search_params):
-#         pass
-# 然后让SearchPic 与 DomainReducer 继承 BaseSearch
-# class SearchPic(BaseSearch):
-#     剩下的跟之前一样
+from PSP.util import ColoredText as CT
 
 
-# 搜索图片(传入原图)
-class SearchPic:
+class BaseSearch:
     def __init__(self):
         # todo 这里可以加载配置文件
+
+        # _search_img() 函数的参数
+        # search_type='similar' 时的参数
+        self.param_similar_atol = 10  # 绝对误差
+        self.param_similar_rtol = 0.01  # 相对误差
+
+        # __resize_img() 函数的参数
+        self.param_wh_rate = 1.2  # 宽高比, w/h
+
+        # 用字典存储每个目标图片对应的相似图片列表，key是目标图片target的绝对路径，value是本地相似图片source的绝对路径列表
+        self.target2source = {}
         pass
 
-    def search_imgs(self, target_dict, source_dict):
+    def search_imgs(self, target_dict, source_dict, **kwargs):
         """
         搜索文件夹下的所有图片
         :param target_dict: 目标图片数组字典
         :param source_dict: 本地图片数组字典
+        :param kwargs: 其他参数，包括：
+            search_type='similar': 搜索类型，包括 'strict', 'similar', 'local'
+            local_type='surf': 局部搜索类型 (在 search_type='local' 时有效)，包括 'surf', 'orb', 'template'
         :return:
         """
-        source_imgs = {}  # 用字典存储每个目标图片对应的相似图片列表
+        search_type = kwargs.get('search_type', 'similar')
+        local_type = kwargs.get('local_type', 'surf')
+
         for i in target_dict.keys():
-            source_imgs[i] = []
+            self.target2source[i] = []
 
         # 对于target_dict中的每一张图片，都在source_dict中搜索是否存在相同的图片
         for target_k, target_v in target_dict.items():
             for source_k, source_v in source_dict.items():
-                if self._search_img(target_v, source_v, search_type='local'):
-                    print("找到相同图片：", target_k, '<----->', source_k)
-                    source_imgs[target_k].append(source_k)  # 将找到的相似图片的地址存放在列表中
+                if self._search_img(target_v, source_v, search_type=search_type, local_type=local_type):
+                    # print("找到相同图片：", target_k, '<----->', source_k)
+                    self.target2source[target_k].append(source_k)  # 将找到的相似图片的地址存放在列表中
+        return self.target2source
 
+    def log_result(self):
+        """
+        打印搜索结果
+        """
         print("☆" * 10)
         print("搜索完成，全部结果如下：")
-        for target_k in source_imgs.keys():
-            if source_imgs[target_k]:
-                print(f"找到的{target_k}全部相同图片的本地图片：{source_imgs[target_k]}")
+        for target_k in self.target2source.keys():
+            if self.target2source[target_k]:
+                print(f"找到{len(self.target2source[target_k])}张与{target_k}相似的本地图片：{self.target2source[target_k]}")
             else:
-                print(f"未找到{target_k}的相同图片")
+                print(f"未找到{target_k}的相似图片")
+
+    def log_param(self, specific_param=None):
+        """
+        打印类的参数
+        :param specific_param: 指定的属性名
+        """
+        print(CT("类" + str(self.__class__.__name__) + "的参数如下：").pink())
+        for attr in dir(self):
+            if not callable(getattr(self, attr)) and not attr.startswith("__"):
+                if specific_param is None or attr in specific_param:
+                    value = getattr(self, attr)
+                    print(f"{CT(attr).pink()}: {value}")
 
     def _search_img(self, target_img, source_img, search_type='strict', local_type='surf'):
         """
@@ -50,7 +74,7 @@ class SearchPic:
         :param target_img: 一张目标图片
         :param source_img: 一张本地图片
         :param search_type: 搜索类型，包括 'strict', 'similar', 'local'
-        :param local_type: 局部搜索类型(在 search_type='local' 时有效)，包括 'surf', 'orb', 'template'
+        :param local_type: 局部搜索类型 (在 search_type='local' 时有效)，包括 'surf', 'orb', 'template'
         :return: 是否找到相同图片, True or False
         """
         # 严格搜索，需要两张图片完全相同
@@ -63,16 +87,19 @@ class SearchPic:
                 return True
             else:
                 return False
+
         # 相似搜索，允许两张图片有一定的差异
         elif search_type == 'similar':
-            # 将图片压缩到相同的大小，比如300*200, todo: 这里可以优化，比如对于横屏竖屏使用不一样的缩放大小
-            target_img = cv2.resize(target_img, (300, 200))
-            source_img = cv2.resize(source_img, (300, 200))
+            target_img, source_img = self.__resize_img(target_img, source_img)  # 将图片压缩到相同的大小
+            # 如果两张图片的shape不同，则直接跳过（此时说明应该选择local方法）
+            if target_img.shape != source_img.shape:
+                return False
             # absolute(a - b) <= (atol + rtol * absolute(b))
-            if np.allclose(target_img, source_img, atol=10, rtol=0.01):
+            if np.allclose(target_img, source_img, atol=self.param_similar_atol, rtol=self.param_similar_rtol):
                 return True
             else:
                 return False
+
         # 局部搜索，对于target_img(小图)，在source_img(大图)中搜索其中的一部分是否存在相同的图片
         elif search_type == 'local':
             if local_type == 'surf':
@@ -128,62 +155,55 @@ class SearchPic:
             else:
                 print("请指定正确的local_type参数")
                 return False
+        else:
+            print("请指定正确的search_type参数")
+            return False
+
+    def __resize_img(self, target_img, source_img):
+        """
+        依据图片是横屏还是竖屏还是近似正方形，将图片压缩到相同的大小
+        [Warning]:
+            该函数不会判断target_img和source_img在压缩后的大小是否相同，需要在调用该函数之后自行判断
+        :param target_img:
+        :param source_img:
+        :return:
+        """
+        def get_new_size(img, rate=1.2):
+            if rate < 1:
+                rate = 1.2
+            h, w = img.shape[:2]
+            aspect_ratio = w / h
+            if aspect_ratio > rate:  # 横屏
+                return 300, 200
+            elif aspect_ratio < 1/rate:  # 竖屏
+                return 200, 300
+            else:  # 近似正方形
+                return 250, 250
+        target_size = get_new_size(target_img, rate=self.param_wh_rate)
+        source_size = get_new_size(source_img, rate=self.param_wh_rate)
+        target_img = cv2.resize(target_img, target_size)
+        source_img = cv2.resize(source_img, source_size)
+        return target_img, source_img
 
 
-# 减小搜索域(传入压缩图片)
-class DomainReducer:
+# 搜索图片(传入原图)
+class SearchPic(BaseSearch):
     def __init__(self):
         # todo 这里可以加载配置文件
+        super().__init__()  # 调用父类的构造函数
+        self.param_similar_atol = 10
+        self.param_similar_rtol = 0.01
         pass
 
-    def reduce_domain(self, target_dict, source_dict):
-        """
-        减小搜索域
-        :param target_dict: 目标图片数组字典
-        :param source_dict: 本地图片数组字典
-        :return: source_imgs: 减小后的本地图片数组字典
-        """
-        source_imgs = {}  # 用字典存储每个目标图片对应的相似图片列表
-        for i in target_dict.keys():
-            source_imgs[i] = []
+# 减小搜索域(传入压缩图片)
+class DomainReducer(BaseSearch):
+    def __init__(self):
+        # todo 这里可以加载配置文件
+        super().__init__()
+        self.param_similar_atol = 30
+        self.param_similar_rtol = 0.01
+        pass
 
-        # 对于target_dict中的每一张图片，都在source_dict中搜索是否存在相同的图片
-        for target_k, target_v in target_dict.items():
-            for source_k, source_v in source_dict.items():
-                if self._search_img(target_v, source_v, search_type='similar'):
-                    print("找到相同图片：", target_k, '<----->', source_k)
-                    source_imgs[target_k].append(source_k)  # 将找到的相似图片的地址存放在列表中
-
-        print("☆" * 10)
-        print("搜索完成，全部结果如下：")
-        for target_k in source_imgs.keys():
-            if source_imgs[target_k]:
-                print(f"找到的{target_k}全部相同图片的本地图片：{source_imgs[target_k]}")
-            else:
-                print(f"未找到{target_k}的相同图片")
-
-        return source_imgs
-
-    # 对比图片
-    def _search_img(self, target_img, source_img, search_type='strict'):
-        """
-        对比两张图片是否相同
-        :param target_img: 一张目标图片
-        :param source_img: 一张本地图片
-        :param compare_type: 对比类型，包括 'strict', 'similar'
-        :return: 是否找到相同图片, True or False
-        """
-        if search_type == 'strict':
-            if np.all(target_img == source_img):
-                return True
-            else:
-                return False
-        elif search_type == 'similar':
-            # absolute(a - b) <= (atol + rtol * absolute(b))
-            if np.allclose(target_img, source_img, atol=50, rtol=0.01):
-                return True
-            else:
-                return False
 
 
 
