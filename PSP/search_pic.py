@@ -1,5 +1,7 @@
 import numpy as np
 import cv2
+import os
+import pickle
 
 from PSP.util import ColoredText as CT
 
@@ -12,6 +14,8 @@ class BaseSearch:
         # search_type='similar' 时的参数
         self.param_similar_atol = 10  # 绝对误差
         self.param_similar_rtol = 0.01  # 相对误差
+        # search_type='mean' 时的参数
+        self.param_mean_threshold = 20  # 均值差异阈值
 
         # __resize_img() 函数的参数
         self.param_wh_rate = 1.2  # 宽高比, w/h
@@ -28,11 +32,12 @@ class BaseSearch:
         :param kwargs: 其他参数，包括：
             search_type='similar': 搜索类型，包括 'strict', 'similar', 'local'
             local_type='surf': 局部搜索类型 (在 search_type='local' 时有效)，包括 'surf', 'orb', 'template'
-        :return:
+        :return: self.target2source: 每个目标图片对应的相似图片列表，key是目标图片的绝对路径，value是本地相似图片的绝对路径列表
         """
         search_type = kwargs.get('search_type', 'similar')
         local_type = kwargs.get('local_type', 'surf')
 
+        self.target2source = {}
         for i in target_dict.keys():
             self.target2source[i] = []
 
@@ -79,23 +84,33 @@ class BaseSearch:
         """
         # 严格搜索，需要两张图片完全相同
         if search_type == 'strict':
-            # 如果两张图片的shape不同，则直接跳过
             if target_img.shape != source_img.shape:
-                return
-            # 如果两张图片的shape相同，则进一步比较两张图片是否相同
+                return False
             if np.all(target_img == source_img):
                 return True
             else:
                 return False
 
         # 相似搜索，允许两张图片有一定的差异
+        # 1.要注意reshape之后可能像素差异会拉大，但因为两张图片清晰度可能不一样，不reshape不好比较
+        # 2.allclose对图片的全部像素点要求比较严格，可以考虑使用mean
         elif search_type == 'similar':
             target_img, source_img = self.__resize_img(target_img, source_img)  # 将图片压缩到相同的大小
-            # 如果两张图片的shape不同，则直接跳过（此时说明应该选择local方法）
+            # 如果两张图片的shape不同，则直接跳过（当二者的图片横宽比差异很大时，应该选择local方法）
             if target_img.shape != source_img.shape:
+                print("两张图片的shape不同")
                 return False
             # absolute(a - b) <= (atol + rtol * absolute(b))
             if np.allclose(target_img, source_img, atol=self.param_similar_atol, rtol=self.param_similar_rtol):
+                return True
+            else:
+                return False
+
+        # 均值搜索，比较两张图片的均值差异
+        elif search_type == 'mean':
+            target_mean = np.mean(target_img)
+            source_mean = np.mean(source_img)
+            if abs(target_mean - source_mean) <= self.param_mean_threshold:
                 return True
             else:
                 return False
@@ -195,38 +210,96 @@ class SearchPic(BaseSearch):
         self.param_similar_rtol = 0.01
         pass
 
+
 # 减小搜索域(传入压缩图片)
 class DomainReducer(BaseSearch):
     def __init__(self):
         # todo 这里可以加载配置文件
         super().__init__()
-        self.param_similar_atol = 30
+        self.param_similar_atol = 50
         self.param_similar_rtol = 0.01
-        pass
+
+    def get_dr_dict(self, target_dict, source_dict, target_cp, source_cp, search_type='mean', local_type='surf'):
+        """
+        获取压缩后的搜索域图片
+        :param target_dict: 目标图片字典，key是图片的绝对路径，value是图片数组
+        :param source_dict: 本地图片字典，key是图片的绝对路径，value是图片数组
+        :param dr_type: 压缩类型，包括 '1px', '9px'
+        :param search_type: 搜索类型，包括 'strict', 'similar', 'local'
+        :param local_type: 局部搜索类型 (在 search_type='local' 时有效)，包括 'surf', 'orb', 'template'
+        :param kwargs: 其他参数
+        :return: imgs_dr: 压缩后的搜索域图片，key是图片的绝对路径，value是图片数组
+        """
+        print("----------减小搜索域---------")
+        imgs_s_p = self.search_imgs(target_cp, source_cp, search_type=search_type, local_type=local_type)
+        len_1 = len(list(imgs_s_p.values())[0])
+        len_2 = len(list(source_dict.values()))
+        if len_2 == 0:
+            print("本地图片为空")
+        else:
+            print(f"压缩比例：{len_1} / {len_2} = {len_1 / len_2}")
 
 
+        # target_dict是目标图片，k是路径，v是数组。source_dict是本地图片，k是路径，v是数组
+        # imgs_s_p记录新的搜索域，k是目标图片路径，value是一个list(里面的元素是待搜索的图片路径)
+        # 首先根据target_dict的key查找imgs_t_p的k，然后根据imgs_s_p的v查找target_dict的k，将这些k存入imgs_dr[target_key]
+        # 最后根据target_dict的key查找target_dict的v，将这些v存入imgs_t_p_origin
+        # 因此imgs_dr是一个字典的字典，k是目标图片路径，v是一个字典(k是本地图片路径，v是图片数组)。
+        imgs_dr = {}
+        for target_key in target_dict.keys():
+            target_key = os.path.normpath(target_key)  # normpath使得路径标准化，比如将'\\'转换为'/'
+            # 查找 imgs_s_p 中是否存在 target_key
+            if target_key in map(os.path.normpath, imgs_s_p.keys()):
+                search_paths = imgs_s_p[target_key]
+                if target_key not in imgs_dr:
+                    imgs_dr[target_key] = {}  # 初始化每个target_key对应的搜索域字典
+                for search_path in search_paths:
+                    search_path = os.path.normpath(search_path)
+                    for key, value in source_dict.items():
+                        if os.path.normpath(key) == search_path:
+                            imgs_dr[target_key][key] = value
+        # 返回imgs_dr的value，todo 这里将来应该重构，只让target_dict输入一张图片
+
+        return list(imgs_dr.values())[0]
+        # return imgs_dr
 
 
 # 压缩图片信息
 class CompressPic:
-    def __init__(self, imgs_dict):
+    def __init__(self, **kwargs):
+        img_1pixel = kwargs.get('img_1px', "img_1px")
+        img_9pixel = kwargs.get('img_9px', "img_9px")
+        cp_path = kwargs.get('cp_path', "data/compressed_imgs")
+
         # todo 这里可以加载配置文件
-        self.imgs_dict = imgs_dict
-        # 把图片变成一个像素点
-        self.img_1pixel = self.compress_imgs(self.imgs_dict, resize=(1, 1))
+
+        # self.img_1px = self.compress_imgs(self.imgs_dict, resize=(1, 1), path=cp_path, name=img_1pixel)  # 把图片变成1个像素点
+        # self.img_9px = self.compress_imgs(self.imgs_dict, resize=(3, 3), path=cp_path, name=img_9pixel)  # 把图片变成9个像素点
+
         pass
 
-    def compress_imgs(self, imgs_dict, resize):
+    def compress_imgs(self, imgs_dict, resize, path="data/compressed_imgs", name="compressed"):
         """
-        压缩文件夹下的所有图片
+        压缩文件夹下的所有图片，并保存压缩后的图片字典
         :param imgs_dict: 图像数组字典，key是图片的绝对路径，value是图片数组
         :param resize: 压缩比例 或者 压缩后的大小(h, w)
-        :return: 压缩后的图片数组字典
+        :param path: 压缩后的图片存放路径
+        :param name: 压缩后的图片的名称
+        :return: 压缩后的图片数组字典，key是图片的绝对路径，value是图片数组
         """
-        compressed_imgs_dict = {}  # 存放压缩后的所有图片，key是图片的绝对路径，value是图片数组
-        for k, v in imgs_dict.items():
-            compressed_imgs_dict[k] = self._compress_img(v, resize)
-        return compressed_imgs_dict
+        # 检查path, name + ".pkl"文件是否存在，如果存在则直接读取
+        if os.path.exists(os.path.join(path, name + ".pkl")):
+            return self._load_compressed_imgs_dict(os.path.join(path, name + ".pkl"))
+        else:
+            compressed_imgs_dict = {}  # 存放压缩后的所有图片，key是图片的绝对路径，value是图片数组
+            for k, v in imgs_dict.items():
+                compressed_imgs_dict[k] = self._compress_img(v, resize)
+
+            # 保存compressed_imgs_dict
+            if not os.path.exists(path):
+                os.makedirs(path)
+            self._save_compressed_imgs_dict(compressed_imgs_dict, os.path.join(path, name + ".pkl"))
+            return compressed_imgs_dict
 
     def _compress_img(self, img, resize):
         """
@@ -248,4 +321,16 @@ class CompressPic:
             print("resize参数输入有误")
             return False
 
+    def _save_compressed_imgs_dict(self, compressed_imgs_dict, path):
+        with open(path, 'wb') as file:
+            pickle.dump(compressed_imgs_dict, file)
 
+    def _load_compressed_imgs_dict(self, path):
+        with open(path, 'rb') as file:
+            compressed_imgs_dict = pickle.load(file)
+        return compressed_imgs_dict
+
+
+    def _add_compressed_imgs_dict(self, compressed_imgs_dict, path):
+        with open(path, 'ab') as file:
+            pickle.dump(compressed_imgs_dict, file)
