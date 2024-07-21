@@ -36,7 +36,7 @@ class SP:
     # 搜索原图，先查验size，再逐个像素点比较
     def search_origin(self, input_img, nums=-1):
         """
-        搜原图
+        搜原图，也就是查找只有文件名不同的图
         :param input_img: np.array，待搜索的图片数组
         :param nums: int，在本地图库中查询到多少个才停止，-1表示不提前停止，1表示一找到就停止
         :return: list，值为本地图库的path

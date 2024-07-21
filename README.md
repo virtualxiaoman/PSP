@@ -5,7 +5,8 @@
 
 **示例：**
 本地图库有365张，106 MB。初始化图库数据： 15.57 秒
-原图(local)---原图(input)---近似图片(input)：
+
+-------原图`local`--------------------原图`input`--------------------近似图片`input`-------
 <div>
     <img src="input/阿洛娜/arona.jpg" width="200">
     <img src="search/阿洛娜_原图.jpg" width="200">
@@ -14,6 +15,7 @@
 查原图：0.09秒，查近似：0.03秒（暂时不知道为什么查原图还是慢一些，可能需要更精确的匹配）
 
 **Quick Start：**
+
 请注意更换为你自己的图片路径，另外第一次运行时会初始化图库数据，需要一定时间，第二次运行就很快了。
 ```python
 path_origin = '../search/阿洛娜_原图.jpg'
@@ -33,12 +35,18 @@ elapsed_time = end_time - start_time
 print("总时间： {:.2f} 秒".format(elapsed_time))
 ```
 输出：
-```python
+```
 从../data/blue archive.pkl初始化dataframe完成  # 这是自带的初始化输出
 ['F:/图片存储 Picture/blue archive/官图/arona.jpg']  # 原图的搜索结果
 ['F:/图片存储 Picture/blue archive/官图/arona.jpg']  # 近似图的搜索结果
 总时间： 0.11 秒  # 总时间
 ```
+
+目前就是初始化图库数据比较慢，后续会优化。
+
+对于我本地的一个`15.3 GB(5443张图)`的图库，初始化用时`638.60秒`，但是查询只需要`0.25秒`。
+
+另外中文路径的似乎一直比英文的慢，暂时不知道原因。
 
 **注：下面的先别看，没翻修。**
 

@@ -1,4 +1,6 @@
 import os
+import sys
+
 import cv2
 import numpy as np
 import pandas as pd
@@ -100,34 +102,45 @@ def imgs2df(path, hash_type='phash', save_path=None):
 
     data = []
     hp = HashPic()
-
+    file_list = []
     for root, dirs, files in os.walk(path):
         for file in files:
             # 'bmp', 'tiff' 没测试过
             if file.endswith(('jpg', 'jpeg', 'png', 'bmp', 'tiff')):
                 file_path = os.path.join(root, file)
                 file_path = os.path.abspath(file_path).replace('\\', '/')
-                img = read_image(file_path, gray_pic=False, show_details=False)
-                if img is not None:
-                    hash_value = hp.get_hash(img, hash_type)
-                    size, shape, mean, pixel_25p = get_image_info(img)
-                    # 注释是运行时间，以365张BA的图为例：
-                    # read_image是9.076秒，get_image_info是13.849秒，imgs2df合计26.117秒
-                    data.append({
-                        'id': len(data),
-                        'path': file_path,
-                        'hash': hash_value,  # 365    0.056    0.000    1.770    0.005 __init__.py:260(phash)
-                        'size': size,
-                        'shape': shape,
-                        'mean': mean,  # 730    0.003    0.000    1.611    0.002 fromnumeric.py:3385(mean)
-                        # 'std': std,  # 365    0.002    0.000   10.589    0.029 fromnumeric.py:3513(std)，时间太长不要了
-                        '25p': pixel_25p  # 365    1.653    0.005    1.653    0.005 {resize}
-                    })
-                    del img
+                file_list.append(file_path)
+    file_list_length = len(file_list)
+
+    for idx, file_path in enumerate(file_list):
+        img = read_image(file_path, gray_pic=False, show_details=False)
+        if img is not None:
+            hash_value = hp.get_hash(img, hash_type)
+            size, shape, mean, pixel_25p = get_image_info(img)
+            # 注释是运行时间，以365张BA的图为例：
+            # read_image是9.076秒，get_image_info是13.849秒，imgs2df合计26.117秒
+            data.append({
+                'id': len(data),
+                'path': file_path,
+                'hash': hash_value,  # 365    0.056    0.000    1.770    0.005 __init__.py:260(phash)
+                'size': size,
+                'shape': shape,
+                'mean': mean,  # 730    0.003    0.000    1.611    0.002 fromnumeric.py:3385(mean)
+                # 'std': std,  # 365    0.002    0.000   10.589    0.029 fromnumeric.py:3513(std)，时间太长不要了
+                '25p': pixel_25p  # 365    1.653    0.005    1.653    0.005 {resize}
+            })
+            del img
+        print(f"\r已经读取第{idx + 1}/{file_list_length}张图片", end='')
+        if idx % 100 == 0:
+            print("\ndata占用的存储空间为：", sys.getsizeof(data) / (1024 * 1024), "MB")
+            df = pd.DataFrame(data, columns=['id', 'path', 'hash', 'size', 'shape', 'mean', 'std', '25p'])
+            df.to_pickle(save_path)
+            print(f"已保存{idx}行的dataframe")
+            del df
 
     df = pd.DataFrame(data, columns=['id', 'path', 'hash', 'size', 'shape', 'mean', 'std', '25p'])
-
     df.to_pickle(save_path)
+    print(f"\ndataframe已全部保存到{save_path}")
     return df
 
 # 获取图片的信息

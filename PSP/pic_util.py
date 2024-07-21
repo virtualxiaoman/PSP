@@ -14,6 +14,8 @@ class HashPic:
         :param hash_type: str，hash方法，默认为phash，可选['ahash', 'phash', 'dhash', 'whash']
         :return: np.array，hash值(bool类型)
         """
+        if img.dtype != np.uint8:
+            img = img.astype(np.uint8)
         img_pil = Image.fromarray(img)
 
         if hash_type == 'ahash':
