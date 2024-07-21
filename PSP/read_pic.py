@@ -1,8 +1,13 @@
 import os
 import cv2
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
+import time
 
+from PSP.pic_util import HashPic
+
+# 读取一张图片
 def read_image(img_path, gray_pic=False, show_details=False):
     """
     读取图片(支持中文路径)
@@ -36,6 +41,7 @@ def read_image(img_path, gray_pic=False, show_details=False):
         plt.close()
     return img
 
+# 读取文件夹下的所有图片
 def read_imgs(path, gray_pic=False, show_details=False):
     """
     读取文件夹下的所有图片
@@ -69,6 +75,71 @@ def read_imgs(path, gray_pic=False, show_details=False):
 
                 img_path = os.path.join(root, file)
                 img = read_image(img_path, gray_pic=gray_pic, show_details=show_details)
-                imgs_dict[os.path.abspath(img_path)] = img
+                img_abs_path = os.path.abspath(img_path).replace('\\', '/')
+                imgs_dict[img_abs_path] = img
 
     return imgs_dict
+
+# 将某个文件夹下的所有图片读取为所需要的dataframe
+def imgs2df(path, hash_type='phash', save_path=None):
+    """
+    将某个文件夹下的所有图片读取为所需要的dataframe
+    :param path: 文件夹路径
+    :param hash_type: 暂时只使用phash
+    :param save_path: 保存路径
+    :return: df: dataframe，有八列：
+        "id"是递增序列(用于查询图片)，"path"是图片的绝对路径，"hash"是图片的hash值(phash)，"size"是图片的占据的空间大小，
+        "shape"是图片的shape，"mean"是图片的像素均值，"std"是图片的像素标准差，"25p"将图片变为的5*5大小之后的像素
+    """
+    # 检查path是否存在
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"[imgs2df]路径不存在：{path}")
+    if hash_type != 'phash':
+        raise ValueError("[imgs2df]虽然HashPic这个类已经支持多种hash方法，但为了减少可能的错误，"
+                         "目前imgs2df只写了phash这一种方法，如有需求请删除这个ValueError")
+
+    data = []
+    hp = HashPic()
+
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            # 'bmp', 'tiff' 没测试过
+            if file.endswith(('jpg', 'jpeg', 'png', 'bmp', 'tiff')):
+                file_path = os.path.join(root, file)
+                file_path = os.path.abspath(file_path).replace('\\', '/')
+                img = read_image(file_path, gray_pic=False, show_details=False)
+                if img is not None:
+                    hash_value = hp.get_hash(img, hash_type)
+                    size, shape, mean, pixel_25p = get_image_info(img)
+                    # 注释是运行时间，以365张BA的图为例：
+                    # read_image是9.076秒，get_image_info是13.849秒，imgs2df合计26.117秒
+                    data.append({
+                        'id': len(data),
+                        'path': file_path,
+                        'hash': hash_value,  # 365    0.056    0.000    1.770    0.005 __init__.py:260(phash)
+                        'size': size,
+                        'shape': shape,
+                        'mean': mean,  # 730    0.003    0.000    1.611    0.002 fromnumeric.py:3385(mean)
+                        # 'std': std,  # 365    0.002    0.000   10.589    0.029 fromnumeric.py:3513(std)，时间太长不要了
+                        '25p': pixel_25p  # 365    1.653    0.005    1.653    0.005 {resize}
+                    })
+                    del img
+
+    df = pd.DataFrame(data, columns=['id', 'path', 'hash', 'size', 'shape', 'mean', 'std', '25p'])
+
+    df.to_pickle(save_path)
+    return df
+
+# 获取图片的信息
+def get_image_info(img):
+    """
+    获取图片的信息
+    :param img: np.ndarray，图片数组
+    :return: size, shape, mean, std, pixel_25p
+    """
+    size = img.size
+    shape = img.shape
+    mean = np.mean(img)
+    resized_img = cv2.resize(img, (5, 5), interpolation=cv2.INTER_AREA)
+    pixel_25p = resized_img.flatten()
+    return size, shape, mean, pixel_25p

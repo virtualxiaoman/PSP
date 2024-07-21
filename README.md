@@ -1,6 +1,46 @@
 ## 1.项目功能
-- 本项目PSP(PicSearchPic)是带GUI的以图搜图工具
-- 目前计划开发网络图片搜索与本地图片搜索两个功能
+- 本项目PSP(PicSearchPic)是带GUI的以图搜图工具。
+- 目前计划开发网络图片搜索与本地图片搜索两个功能。
+- 本项目中，一般用`local`代表本地图片，`input`代表输入图片。
+
+**示例：**
+本地图库有365张，106 MB。初始化图库数据： 15.57 秒
+原图(local)---原图(input)---近似图片(input)：
+<div>
+    <img src="input/阿洛娜/arona.jpg" width="200">
+    <img src="search/阿洛娜_原图.jpg" width="200">
+    <img src="search/阿洛娜_水印_重复.jpg" width="200">
+</div>
+查原图：0.09秒，查近似：0.03秒（暂时不知道为什么查原图还是慢一些，可能需要更精确的匹配）
+
+**Quick Start：**
+请注意更换为你自己的图片路径，另外第一次运行时会初始化图库数据，需要一定时间，第二次运行就很快了。
+```python
+path_origin = '../search/阿洛娜_原图.jpg'
+path_similar = '../search/阿洛娜_水印_重复.jpg'
+img_origin = read_image(path_origin, gray_pic=False, show_details=False)
+img_similar = read_image(path_similar, gray_pic=False, show_details=False)
+
+start_time = time.time()
+sp = SP()
+sp.init_pic_df(path_local='F:/图片存储 Picture/blue archive')
+ans = sp.search_origin(img_origin)
+print(ans)
+ans = sp.search_similar(img_similar)
+print(ans)
+end_time = time.time()
+elapsed_time = end_time - start_time
+print("总时间： {:.2f} 秒".format(elapsed_time))
+```
+输出：
+```python
+从../data/blue archive.pkl初始化dataframe完成  # 这是自带的初始化输出
+['F:/图片存储 Picture/blue archive/官图/arona.jpg']  # 原图的搜索结果
+['F:/图片存储 Picture/blue archive/官图/arona.jpg']  # 近似图的搜索结果
+总时间： 0.11 秒  # 总时间
+```
+
+**注：下面的先别看，没翻修。**
 
 ## 2.项目结构
 ```
@@ -10,7 +50,7 @@
 ├─ PSP                   # 本项目主要功能的代码
 │  ├─ __init__.py        # 初始化文件
 │  ├─ read_pic.py        # 读取图片功能
-│  ├─ search_pic.py          # 图片搜索功能
+│  ├─ search_pic.py      # 图片搜索功能
 │  ├─ util.py            # 工具
 ├─ __init__.py           # 初始化文件
 ├─ main.py               # 主程序入口(运行此文件以启动)

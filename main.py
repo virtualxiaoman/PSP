@@ -1,3 +1,13 @@
+# https://segmentfault.com/a/1190000042234114    towhee
+# https://segmentfault.com/a/1190000038308093    dHash
+# https://blog.csdn.net/sinat_27382047/article/details/83040411    较全
+
+# 其他
+# https://blog.csdn.net/wsp_1138886114/article/details/84766965
+# https://segmentfault.com/a/1190000004467183
+
+# https://blog.csdn.net/imwaters/article/details/117426488
+# https://blog.csdn.net/weixin_41809530/article/details/109258984
 import os
 import time
 
@@ -6,6 +16,7 @@ from PSP.search_pic import SearchPic, CompressPic, DomainReducer
 
 path = 'input'
 # path = r'F:\图片存储 Picture\blue archive'
+path = r"F:\TEMP awa\Cosplay Tales"
 source_imgs_dict = read_imgs(path)
 # for k, v in source_imgs_dict.items():
 #     print(k, v.shape)
@@ -14,7 +25,8 @@ print('-------------------')
 target_path = r'search'
 # target_imgs_dict = {r'search\阿洛娜_网图.jpg': read_image(target_path + r'\阿洛娜_网图.jpg')}
 target_imgs_dict = {r'search\阿洛娜_水印.png': read_image(target_path + r'\阿洛娜_水印.png')}
-# target_imgs_dict = read_imgs(target_path)
+target_path = r"D:\HP\Desktop\111"
+target_imgs_dict = read_imgs(target_path)
 
 
 cp = CompressPic()
@@ -23,11 +35,11 @@ target_imgs_9x_dict = cp.compress_imgs(target_imgs_dict, resize=(3, 3), name="�
 source_imgs_1x_dict = cp.compress_imgs(source_imgs_dict, resize=(1, 1), name="测试数据_source_1x")
 source_imgs_9x_dict = cp.compress_imgs(source_imgs_dict, resize=(3, 3), name="测试数据_source_9x")
 
-
+imgs_s_origin = source_imgs_dict
 for k, v in target_imgs_dict.items():
     dr = DomainReducer()
-    imgs_s_origin = dr.get_dr_dict({k: v}, source_imgs_dict, target_imgs_1x_dict, source_imgs_1x_dict, search_type='mean')
-    imgs_s_origin = dr.get_dr_dict({k: v}, imgs_s_origin, target_imgs_9x_dict, source_imgs_9x_dict, search_type='mean')
+    # imgs_s_origin = dr.get_dr_dict({k: v}, source_imgs_dict, target_imgs_1x_dict, source_imgs_1x_dict, search_type='mean')
+    # imgs_s_origin = dr.get_dr_dict({k: v}, imgs_s_origin, target_imgs_9x_dict, source_imgs_9x_dict, search_type='mean')
     start1 = time.time()
     psp = SearchPic()
     psp.search_imgs({k: v}, imgs_s_origin, search_type='local')

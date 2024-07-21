@@ -2,10 +2,92 @@ import numpy as np
 import cv2
 import os
 import pickle
+import pandas as pd
 
+from PSP.read_pic import imgs2df, read_image
+from PSP.pic_util import HashPic
 from PSP.util import ColoredText as CT
 
 
+class SP:
+    def __init__(self):
+        self.df = None
+        self.id_origin = []  # 匹配到的原图的id
+        self.id_similar = []  # 匹配到的近似图片的id
+
+    # 初始化图片数据，必选
+    def init_pic_df(self, path_local=None, save_name=None):
+        if path_local is None and save_name is None:
+            raise ValueError("path_local和save_name不能同时为空")
+
+        if save_name is None:
+            # save_path 取 path_local 的最后一个文件夹名
+            save_name = path_local.split('/')[-1]
+        save_path = f"../data/{save_name}.pkl"
+        # 检查save_path是否存在，如果存在就直接读取，否则就重新生成
+        if os.path.exists(save_path):
+            df = pd.read_pickle(save_path)
+        else:
+            df = imgs2df(path_local, save_path=save_path)
+        # print(df.head(10))
+        self.df = df
+        print(f"从{save_path}初始化dataframe完成")
+
+    # 搜索原图，先查验size，再逐个像素点比较
+    def search_origin(self, input_img, nums=-1):
+        """
+        搜原图
+        :param input_img: np.array，待搜索的图片数组
+        :param nums: int，在本地图库中查询到多少个才停止，-1表示不提前停止，1表示一找到就停止
+        :return: list，值为本地图库的path
+        """
+        self.id_origin = []  # 清空
+        input_size = input_img.size
+        input_shape = input_img.shape
+        hp = HashPic()
+        input_hash = hp.get_hash(input_img, "phash")  # np.array
+
+        found_paths = []
+        for index, row in self.df.iterrows():
+            # 先比较size与shape
+            if row['size'] == input_size and row['shape'] == input_shape and np.array_equal(row['hash'], input_hash):
+                local_img_path = row['path']
+                self.id_origin.append(row["id"])
+                local_img = read_image(local_img_path, gray_pic=False, show_details=False)
+                # 逐个像素点比较
+                if np.array_equal(input_img, local_img):
+                    found_paths.append(local_img_path)
+                    if nums != -1 and len(found_paths) >= nums:
+                        break
+        return found_paths
+
+    # 搜索近似图片，先查验phash，找出phash小于threshold(0.1)的
+    def search_similar(self, input_img, threshold=0.1):
+        """
+        搜差不多的原图(允许小规模水印)
+        :param input_img: np.array 待搜索的图片数组
+        :param threshold: float，phash忍耐阈值，因为是64个值，0.1就是容忍6个点不同
+        :return: list，值为本地图库的path
+        """
+        self.id_similar = []  # 清空
+        hp = HashPic()
+        input_hash = hp.get_hash(input_img, "phash")
+
+        found_paths = []
+        for index, row in self.df.iterrows():
+            sim = hp.cal_hash_distance(input_hash, row["hash"])
+            if sim < threshold:
+                local_img_path = row['path']
+                self.id_similar.append(row["id"])
+                # 这里最好还比较一次原像素点，但是我开摆了
+                found_paths.append(local_img_path)
+
+        return found_paths
+
+
+
+
+# 下面的代码正在重构，不要使用了
 class BaseSearch:
     def __init__(self):
         # todo 这里可以加载配置文件
