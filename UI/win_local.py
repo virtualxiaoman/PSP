@@ -1,34 +1,69 @@
 import os
-
-from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QButtonGroup,\
-    QLineEdit, QStackedLayout
+import numpy as np
+import cv2
+from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QButtonGroup, \
+    QLineEdit, QStackedLayout, QListWidget, QApplication
 from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import Qt
 
 from Tools.search_pic import SP
-from UI.config import Button_css, Text_css, Input_css
+from UI.config import Button_css, Text_css, Input_css, Background_css, List_css
 Button_css = Button_css()
 Text_css = Text_css()
 Input_css = Input_css()
+Background_css = Background_css()
+List_css = List_css()
 
 class SPInit(QThread):
     finished = pyqtSignal()
-    progress = pyqtSignal(int)
+    log_signal = pyqtSignal(str)  # 信号，用于传递字符串
 
-    def __init__(self, model_path):
+    def __init__(self, local_path):
         super().__init__()
-        self.model_path = model_path
+        self.local_path = local_path
 
     def run(self):
         self.sp = SP()
-        self.sp.init_pic_df(path_local=self.model_path)
+        self.sp.init_pic_df(path_local=self.local_path, log_callback=self.update_log)
         self.finished.emit()
+
+    def update_log(self, log_text):
+        self.log_signal.emit(log_text)
+
+
+class SPSearch(QThread):
+    finished = pyqtSignal()
+    result_list = pyqtSignal(list)
+
+    def __init__(self, img, model_path, search_choice, ori_num=None, sim_threshold=None):
+        super().__init__()
+        self.img = img
+        self.model_path = model_path
+        self.search_choice = search_choice
+        self.ori_num = ori_num
+        self.sim_threshold = sim_threshold
+
+    def run(self):
+        self.sp = SP()
+        self.sp.init_pic_df(save_path=self.model_path)
+        result_list = []
+        if self.search_choice == "ori":
+            result_list = self.sp.search_origin(self.img, nums=self.ori_num)
+        elif self.search_choice == "sim":
+            result_list = self.sp.search_similar(self.img, threshold=self.sim_threshold)
+        self.result_list.emit(result_list)
 
 class Win_Local(QWidget):
     def __init__(self):
         super().__init__()
+        self.local_path = None  # 本地图库路径
         self.model_name = None  # 本地图库模型的名字
         self.model_path = None  # 本地图库模型的路径(完整路径)
         self.search_choice = "ori"  # 默认设置为"ori"原图搜索。"sim"为相似图搜索。暂不支持"wat"水印搜索、"par"局部搜索
+        self.result_list = []  # 搜索结果列表
+        self.ori_num = -1  # 原图搜索的数量
+        self.sim_threshold = 0.1  # 相似图搜索的阈值
         self.init_ui()
 
     def init_ui(self):
@@ -53,12 +88,16 @@ class Win_Local(QWidget):
         self.H_Layout_tipparam = self.init_HLayout_tipparam()
         V_Layout_main.addLayout(self.H_Layout_tipparam)
 
-        self.search_result = QLabel("搜索结果..（占位符）")
-        V_Layout_main.addWidget(self.search_result)
-        V_Layout_main.addStretch(30)
+        self.H_Layout_searchtip = self.init_HLayout_searchtip()
+        V_Layout_main.addLayout(self.H_Layout_searchtip)
+
+        self.H_Layout_inputreturn = self.init_HLayout_inputreturn()
+        V_Layout_main.addLayout(self.H_Layout_inputreturn)
+
+        V_Layout_main.addStretch(10)
         return V_Layout_main
 
-    # 本地搜索(本地图库路径，图片数据路径)
+    # 本地搜索(本地图库路径，图片模型路径)
     def init_HLayout_localmodel(self):
         H_Layout_localmodel = QHBoxLayout()
         Label_localmodel = QLabel("图库&模型：")
@@ -77,7 +116,7 @@ class Win_Local(QWidget):
         btn_model.setStyleSheet(Button_css.BTN_BLUE_PURPLE)
         btn_model.clicked.connect(self.__on_choice_model)
         # 创建文件夹路径显示文本
-        self.Label_model_path = QLabel("模型路径：当前还未选择图库模型文件。PS.当前不要修改默认路径，我没写这个功能")
+        self.Label_model_path = QLabel("模型路径：当前还未选择图库模型文件。")
         self.Label_model_path.setStyleSheet(Text_css.TEXT_GRAY_12)
 
         H_Layout_localmodel.addWidget(Label_localmodel)
@@ -90,7 +129,7 @@ class Win_Local(QWidget):
         H_Layout_localmodel.addStretch(30)
         return H_Layout_localmodel
 
-    # 搜索规则
+    # 搜索规则(原图、近似、水印、局部)
     def init_HLayout_searchchoice(self):
         H_Layout_searchchoice = QHBoxLayout()
         # 搜索规则
@@ -128,7 +167,7 @@ class Win_Local(QWidget):
         H_Layout_searchchoice.addStretch(1)
         return H_Layout_searchchoice
 
-    # 提示&参数
+    # 提示&参数(原图、近似、水印、局部)
     def init_HLayout_tipparam(self):
         # 提示区域布局
         self.stacked_layout = QStackedLayout()
@@ -206,10 +245,85 @@ class Win_Local(QWidget):
         # H_Layout_tipparam.addStretch(1)
         return self.stacked_layout
 
+    # 搜索提示&按钮
+    def init_HLayout_searchtip(self):
+        H_Layout_searchtip = QHBoxLayout()
+        self.Label_search_tip = QLabel("本地图库处理完毕后，在下方图片区域粘贴图片或者点击右侧按钮，即可开始搜索")
+        btn_search = QPushButton("开始搜索")
+        btn_search.setStyleSheet(Button_css.BTN_BLUE_PURPLE)
+        btn_search.clicked.connect(self.__paste_image)  # 点击按钮，获取剪贴板图片，然后搜索
+        H_Layout_searchtip.addWidget(self.Label_search_tip)
+        H_Layout_searchtip.addWidget(btn_search)
+        H_Layout_searchtip.addStretch(1)
+        return H_Layout_searchtip
+
+    # 输入&返回(图片input，图片return、搜索结果list)
+    def init_HLayout_inputreturn(self):
+        H_main_layout = QHBoxLayout()
+        H_main_layout.addStretch(2)
+
+        V_left_layout = QVBoxLayout()
+        self.image_label1 = QLabel("待搜索的图片(从剪贴板复制)")
+        self.image_label1.setFixedSize(325, 225)
+        self.image_label1.setStyleSheet(Background_css.XM_BLUE)
+        V_left_layout.addWidget(self.image_label1)
+        self.image_label2 = QLabel("搜索结果(点击右侧的路径列表以查看图片)")
+        self.image_label2.setFixedSize(325, 225)
+        self.image_label2.setStyleSheet(Background_css.XM_BLUE)
+        V_left_layout.addWidget(self.image_label2)
+        H_main_layout.addLayout(V_left_layout)
+        H_main_layout.addStretch(1)
+
+        right_layout = QVBoxLayout()
+
+        self.address_list = QListWidget()
+        self.address_list.setStyleSheet(List_css.LIGHT_GRAY)
+        self.address_list.addItems(self.result_list)
+        self.address_list.currentRowChanged.connect(self.__update_image_label2)
+        self.address_list.setFixedWidth(350)
+        right_layout.addWidget(self.address_list)
+        H_main_layout.addLayout(right_layout)
+        H_main_layout.addStretch(20)
+
+        if isinstance(self.result_list, list) and len(self.result_list) > 0:
+            self.__load_image(self.result_list[0], self.image_label2)
+        # Clipboard listener
+        self.clipboard = QApplication.clipboard()
+        self.clipboard.dataChanged.connect(self.__paste_image)
+
+        return H_main_layout
+
     # 模型初始化
     def init_sp(self):
-        self.thread = SPInit(self.model_path)
+        self.thread = SPInit(self.local_path)
         self.thread.finished.connect(self.__on_spinit_finished)
+        self.thread.log_signal.connect(self.__update_log_label)
+        self.thread.start()
+
+    # 使用模型搜索图片
+    def search_sp(self, img):
+        # 检查model_path是否存在
+        if not isinstance(self.model_path, str) or not os.path.exists(self.model_path):
+            self.Label_search_tip.setText(f"模型文件{self.model_path}不存在，请先创建模型文件")
+            return False
+        # 检查search_choice是否正确
+        if self.search_choice not in ["ori", "sim"]:
+            self.Label_search_tip.setText(f"搜索方式{self.search_choice}选择错误，请重新选择")
+            return False
+        # 检查ori_num是否正确(要么是-1要么是正整数)
+        if self.search_choice == "ori" and \
+                (not isinstance(self.ori_num, int)) and \
+                (self.ori_num != -1 and self.ori_num <= 0):
+            self.Label_search_tip.setText(f"搜索数量{self.ori_num}设置错误，请重新设置")
+            return False
+        # 检查sim_threshold是否正确(要么是0~1之间的小数)
+        if self.search_choice == "sim" and \
+                (not isinstance(self.sim_threshold, float)) and \
+                (self.sim_threshold > 1 or self.sim_threshold < 0):
+            self.Label_search_tip.setText(f"容忍度{self.sim_threshold}设置错误，请重新设置")
+            return False
+        self.thread = SPSearch(img, self.model_path, self.search_choice, self.ori_num, self.sim_threshold)
+        self.thread.result_list.connect(self.__update_result_list)
         self.thread.start()
 
     # 选择本地图库文件夹
@@ -227,6 +341,7 @@ class Win_Local(QWidget):
             folder_show = self.__shorten_folder_path(folder)  # 如果folder太长，只显示最后一部分
             # print(f"[__on_choice_video_folder]选择的文件夹为：{folder}")
             # print(f"[__on_choice_video_folder]显示的文件夹为：{folder_show}")
+            self.local_path = folder
             self.Label_local_path.setText(f'图库路径：{folder_show}')
             # model_name 取 folder 的最后一个文件夹名
             self.model_name = folder.split('/')[-1]
@@ -322,6 +437,7 @@ class Win_Local(QWidget):
     #         self.Input_param1.setPlaceholderText("")
     #         self.Input_param1.setEnabled(False)
 
+    # 更新搜索参数
     def __update_ori_num(self, text):
         try:
             self.ori_num = int(text)
@@ -350,3 +466,80 @@ class Win_Local(QWidget):
     def __on_spinit_finished(self):
         self.Label_localmodel.setText(f"图库&模型：{self.model_name}加载完成")
         print("[__on_spinit_finished]SP初始化完成")
+
+    # 更新sp日志
+    def __update_log_label(self, log_text):
+        self.Label_localmodel.setText(log_text)
+
+    # 获取剪贴板图片
+    def __paste_image(self):
+        mime = self.clipboard.mimeData()  # 获取剪贴板数据
+        # print("-------------------")
+        # print(mime.formats())
+        # print(mime.hasImage())
+        # print(mime.data)
+        if mime.hasImage():
+            image = self.clipboard.image()
+            pixmap = QPixmap.fromImage(image)
+            self.image_label1.setPixmap(pixmap.scaled(self.image_label1.size(), Qt.AspectRatioMode.KeepAspectRatio))
+            # 将QImage转为numpy数组
+            img = self.__qimage2np(image)
+            # 使用模型搜索图片
+            self.search_sp(img)
+        else:
+            self.image_label1.clear()
+            self.image_label1.setText("剪贴板里不是图片")
+
+    # 更新下方图片
+    def __update_image_label2(self, index):
+        if index >= 0:
+            image_path = self.result_list[index]
+            self.__load_image(image_path, self.image_label2)
+        else:
+            self.image_label2.clear()
+
+    # 加载path对应的图片
+    def __load_image(self, image_path, label):
+        if os.path.exists(image_path):
+            pixmap = QPixmap(image_path)
+            label.setPixmap(pixmap.scaled(label.size(), Qt.AspectRatioMode.KeepAspectRatio))
+        else:
+            label.clear()
+
+    # 更新搜索结果列表
+    def __update_result_list(self, result_list):
+        self.result_list = result_list
+        self.address_list.clear()
+        self.address_list.addItems(result_list)
+        self.image_label2.clear()
+
+        if isinstance(result_list, list) and len(result_list) > 0:
+            self.__load_image(result_list[0], self.image_label2)
+        print(f"[__update_result_list]搜索结果列表更新完成")
+        print(self.result_list)
+
+    # QImage转numpy数组
+    def __qimage2np(self, qimage):
+        """
+        将QImage转换为numpy数组
+        :param qimage: QImage对象
+        :return: numpy数组
+        """
+        # arr = np.array(qimage.convertToFormat(QImage.Format.Format_RGB888))
+        # print(arr)
+        # print(type(arr))
+        # print(arr.dtype)
+        size = qimage.size()
+        s = qimage.bits().asstring(size.width() * size.height() * qimage.depth() // 8)  # format 0xffRRGGBB
+
+        arr = np.fromstring(s, dtype=np.uint8).reshape((size.height(), size.width(), qimage.depth() // 8))
+
+        # qimage = qimage.convertToFormat(QImage.Format.Format_RGB888)
+        # width = qimage.width()
+        # height = qimage.height()
+        #
+        # ptr = qimage.bits()
+        # ptr.setsize(qimage.byteCount())
+        # arr = np.array(ptr).reshape((height, width, 3))
+
+        return arr

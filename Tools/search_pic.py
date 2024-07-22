@@ -16,19 +16,27 @@ class SP:
         self.id_similar = []  # 匹配到的近似图片的id
 
     # 初始化图片数据，必选
-    def init_pic_df(self, path_local=None, save_name=None):
-        if path_local is None and save_name is None:
-            raise ValueError("path_local和save_name不能同时为空")
-
-        if save_name is None:
-            # save_path 取 path_local 的最后一个文件夹名
-            save_name = path_local.split('/')[-1]
-        save_path = f"../data/{save_name}.pkl"
+    def init_pic_df(self, path_local=None, save_name=None, save_path=None, log_callback=None):
+        """
+        初始化图片数据
+        :param path_local: 本地图库路径
+        :param save_name: 保存的模型名，默认是f"../data/{save_name}.pkl"
+        :param save_path: 主动指定保存模型的完整路径
+        :param log_callback: 日志回调函数，用于将日志传回到QT里去
+        :return:
+        """
+        if path_local is None and save_name is None and save_path is None:
+            raise ValueError("path_local和save_name和save_path不能同时为空")
+        if save_path is None:
+            if save_name is None:
+                # save_path 取 path_local 的最后一个文件夹名
+                save_name = path_local.split('/')[-1]
+            save_path = f"../data/{save_name}.pkl"
         # 检查save_path是否存在，如果存在就直接读取，否则就重新生成
         if os.path.exists(save_path):
             df = pd.read_pickle(save_path)
         else:
-            df = imgs2df(path_local, save_path=save_path)
+            df = imgs2df(path_local, save_path=save_path, log_callback=log_callback)
         # print(df.head(10))
         self.df = df
         print(f"[init_pic_df]从{save_path}初始化dataframe完成")
@@ -73,19 +81,19 @@ class SP:
         hp = HashPic()
         input_hash = hp.get_hash(input_img, "phash")
 
-        found_paths = []
+        found_paths_with_sim = []
         for index, row in self.df.iterrows():
             sim = hp.cal_hash_distance(input_hash, row["hash"])
             if sim < threshold:
                 local_img_path = row['path']
                 self.id_similar.append(row["id"])
                 # 这里最好还比较一次原像素点，但是我开摆了
-                found_paths.append(local_img_path)
-
+                found_paths_with_sim.append((sim, local_img_path))
+        # 根据 sim 对 found_paths_with_sim 进行排序
+        found_paths_with_sim.sort(key=lambda x: x[0])
+        # 提取排序后的路径
+        found_paths = [path for sim, path in found_paths_with_sim]
         return found_paths
-
-
-
 
 # 下面的代码正在重构，不要使用了
 class BaseSearch:

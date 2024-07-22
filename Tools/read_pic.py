@@ -83,15 +83,16 @@ def read_imgs(path, gray_pic=False, show_details=False):
     return imgs_dict
 
 # 将某个文件夹下的所有图片读取为所需要的dataframe
-def imgs2df(path, hash_type='phash', save_path=None):
+def imgs2df(path, hash_type='phash', save_path=None, log_callback=None):
     """
     将某个文件夹下的所有图片读取为所需要的dataframe
     :param path: 文件夹路径
     :param hash_type: 暂时只使用phash
     :param save_path: 保存路径
-    :return: df: dataframe，有八列：
+    :param log_callback: 日志传回到QT里去
+    :return: df: dataframe，有七列：
         "id"是递增序列(用于查询图片)，"path"是图片的绝对路径，"hash"是图片的hash值(phash)，"size"是图片的占据的空间大小，
-        "shape"是图片的shape，"mean"是图片的像素均值，"std"是图片的像素标准差，"25p"将图片变为的5*5大小之后的像素
+        "shape"是图片的shape，"mean"是图片的像素均值，"25p"将图片变为的5*5大小之后的像素
     """
     # 检查path是否存在
     if not os.path.exists(path):
@@ -132,6 +133,8 @@ def imgs2df(path, hash_type='phash', save_path=None):
             del img
         log_text = f"已经读取第{idx + 1}/{file_list_length}张图片"
         print(f"\r{log_text}", end='')
+        if log_callback:
+            log_callback(log_text)  # 传回到QT界面
         if idx % 100 == 0:
             print("\ndata占用的存储空间为：", sys.getsizeof(data) / (1024 * 1024), "MB")
             df = pd.DataFrame(data, columns=['id', 'path', 'hash', 'size', 'shape', 'mean', 'std', '25p'])

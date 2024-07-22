@@ -1,13 +1,15 @@
 class Text:
     def __init__(self):
-        self.WindowTitle = "BiliTools_V1.0"
+        self.WindowTitle = "PSP_V0.0"
 
 
 class Background_css:
     def __init__(self):
         # 背景颜色
         self.WHITE = "background-color:white;"
-        self.LIGHT_BLUE = "background-color: rgba(102, 204, 255, 0.2);"  # 天依蓝
+        self.TianYi_BLUE = "background-color: rgba(102, 204, 255, 0.2);"  # 天依蓝
+        self.XM_BLUE = "background-color: rgba(178,216,232, 0.3);"  # 小满蓝
+        self.LIGHT_GRAY = "background-color: rgba(222,223,224, 0.3);"  # 浅灰色
 
 class Button_css:
     def __init__(self):
@@ -66,7 +68,6 @@ class Button_css:
         }
         """
 
-
 class Input_css:
     def __init__(self):
         # 输入框样式，圆角，蓝色边框，悬停时颜色变成红色
@@ -116,18 +117,21 @@ class Text_css:
         # 文本样式，字体大小12px，灰色
         self.TEXT_GRAY_12 = "font-size: 12px; color: gray;"
 
-class ComboBox_css:
+class List_css:
     def __init__(self):
-        # 下拉框样式，圆角，蓝色边框，悬停时颜色变成绿色
-        self.COMBOBOX_BLUE_GREEN = """
-        QComboBox {
-            border: 2px solid rgba(206,147,216, 0.8);
-            background-color: rgba(71, 224, 241, 0.3);
-            border-radius: 3px;
-            padding: 2px 4px;
+        self.LIGHT_GRAY = """
+        QListWidget {
+            background-color: rgba(222,223,224, 0.3);
+            border: 1px solid rgba(178,216,232, 0.3);
+            font-size: 10px;
+            padding: 2px;
         }
-        
-        QComboBox:hover {
-            border: 2px solid rgba(149,212,117, 0.6);
+        QListWidget::item {
+            padding: 3px;
+            border-bottom: 1px solid rgba(255,192,203, 0.4)
+        }
+        QListWidget::item:selected {
+            background-color: rgba(121,187,255, 0.8);
+            color: rgba(0,0,0, 1);
         }
         """

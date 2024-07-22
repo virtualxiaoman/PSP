@@ -48,6 +48,11 @@ print("总时间： {:.2f} 秒".format(elapsed_time))
 
 另外中文路径的似乎一直比英文的慢，暂时不知道原因。
 
+构建方法：`pyinstaller -F --noconsole --icon=UI/data/arona.ico UI/ui.py`或者`pyinstaller -F --noconsole --icon=UI/data/arona.ico main.py`
+
+如果上面的报错，就改为`pyinstaller -F --noconsole --icon=UI/data/arona.ico UI/ui.py -p E:/Py-Project/PSP`。
+
+
 **注：下面的先别看，没翻修。**
 
 ## 2.项目结构

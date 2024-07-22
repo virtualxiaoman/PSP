@@ -1,10 +1,5 @@
 import sys
-import time
-from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QHBoxLayout, QVBoxLayout, QPushButton, QStackedLayout,\
-    QLabel, QSplashScreen
-from PyQt6.QtGui import QPixmap, QFont
-from PyQt6.QtCore import QTimer, Qt, QBasicTimer, QThread, pyqtSignal, QCoreApplication
-from PyQt6 import QtCore
+from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QHBoxLayout, QVBoxLayout, QPushButton, QStackedLayout
 
 from UI.win_local import Win_Local
 from UI.win_net import Win_Net
@@ -39,7 +34,7 @@ class PSP_UI(QMainWindow):
 
     def init_ui(self):
         # 设置窗口的基础属性
-        self.resize(1200, 700)
+        self.resize(1000, 700)
         self.setWindowTitle(Text_config.WindowTitle)
         self.setStyleSheet(Background_css.WHITE)
 
@@ -73,7 +68,7 @@ class PSP_UI(QMainWindow):
 
     def __init_Widget_btn(self):
         btn_widget = QWidget()
-        btn_widget.setStyleSheet(Background_css.LIGHT_BLUE)
+        btn_widget.setStyleSheet(Background_css.TianYi_BLUE)
         VLayout_btn = QVBoxLayout()
         btn_press1 = QPushButton("本地搜图")
         btn_press2 = QPushButton("网络搜图")
