@@ -4,9 +4,9 @@ import os
 import pickle
 import pandas as pd
 
-from PSP.read_pic import imgs2df, read_image
-from PSP.pic_util import HashPic
-from PSP.util import ColoredText as CT
+from Tools.read_pic import imgs2df, read_image
+from Tools.pic_util import HashPic
+from Tools.util import ColoredText as CT
 
 
 class SP:
@@ -31,7 +31,7 @@ class SP:
             df = imgs2df(path_local, save_path=save_path)
         # print(df.head(10))
         self.df = df
-        print(f"从{save_path}初始化dataframe完成")
+        print(f"[init_pic_df]从{save_path}初始化dataframe完成")
 
     # 搜索原图，先查验size，再逐个像素点比较
     def search_origin(self, input_img, nums=-1):

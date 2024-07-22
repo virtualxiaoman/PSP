@@ -7,7 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import time
 
-from PSP.pic_util import HashPic
+from Tools.pic_util import HashPic
 
 # 读取一张图片
 def read_image(img_path, gray_pic=False, show_details=False):
@@ -130,7 +130,8 @@ def imgs2df(path, hash_type='phash', save_path=None):
                 '25p': pixel_25p  # 365    1.653    0.005    1.653    0.005 {resize}
             })
             del img
-        print(f"\r已经读取第{idx + 1}/{file_list_length}张图片", end='')
+        log_text = f"已经读取第{idx + 1}/{file_list_length}张图片"
+        print(f"\r{log_text}", end='')
         if idx % 100 == 0:
             print("\ndata占用的存储空间为：", sys.getsizeof(data) / (1024 * 1024), "MB")
             df = pd.DataFrame(data, columns=['id', 'path', 'hash', 'size', 'shape', 'mean', 'std', '25p'])
@@ -140,7 +141,7 @@ def imgs2df(path, hash_type='phash', save_path=None):
 
     df = pd.DataFrame(data, columns=['id', 'path', 'hash', 'size', 'shape', 'mean', 'std', '25p'])
     df.to_pickle(save_path)
-    print(f"\ndataframe已全部保存到{save_path}")
+    print(f"\n[imgs2df]dataframe已全部保存到{save_path}")
     return df
 
 # 获取图片的信息
