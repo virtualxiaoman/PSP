@@ -3,6 +3,7 @@ from scipy.spatial.distance import hamming, euclidean, cosine
 from PIL import Image
 import numpy as np
 
+
 class HashPic:
     def __init__(self):
         pass
@@ -49,5 +50,3 @@ class HashPic:
             raise ValueError("Unsupported calculation type. Choose from ['hamming', 'euclidean', 'cosine']")
 
         return distance
-
-
