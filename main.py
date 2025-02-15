@@ -15,7 +15,7 @@
 # from Tools.search_pic import SearchPic, CompressPic, DomainReducer
 #
 # path = 'input'
-# # path = r'F:\图片存储 Picture\blue archive'
+# # path = r'F:\Picture\blue archive'
 # path = r"F:\TEMP awa\Cosplay Tales"
 # source_imgs_dict = read_imgs(path)
 # # for k, v in source_imgs_dict.items():

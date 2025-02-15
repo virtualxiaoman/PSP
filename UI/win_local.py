@@ -9,11 +9,13 @@ from PyQt6.QtCore import Qt
 
 from Tools.search_pic import SP
 from UI.config import Button_css, Text_css, Input_css, Background_css, List_css
+
 Button_css = Button_css()
 Text_css = Text_css()
 Input_css = Input_css()
 Background_css = Background_css()
 List_css = List_css()
+
 
 class SPInit(QThread):
     finished = pyqtSignal()
@@ -49,10 +51,11 @@ class SPSearch(QThread):
         self.sp.init_pic_df(save_path=self.model_path)
         result_list = []
         if self.search_choice == "ori":
-            result_list = self.sp.search_origin(self.img, nums=self.ori_num)
+            result_list = self.sp.search_origin(self.img, max_result=self.ori_num)
         elif self.search_choice == "sim":
-            result_list = self.sp.search_similar(self.img, threshold=self.sim_threshold)
+            result_list = self.sp.search_similar(self.img, hash_threshold=self.sim_threshold)
         self.result_list.emit(result_list)
+
 
 class Win_Local(QWidget):
     def __init__(self):

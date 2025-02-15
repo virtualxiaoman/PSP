@@ -28,7 +28,7 @@ img_similar = read_image(path_similar, gray_pic=False, show_details=False)
 
 start_time = time.time()
 sp = SP()
-sp.init_pic_df(path_local='F:/图片存储 Picture/blue archive')
+sp.init_pic_df(path_local='F:/Picture/blue archive')
 ans = sp.search_origin(img_origin)
 print(ans)
 ans = sp.search_similar(img_similar)
@@ -40,8 +40,8 @@ print("总时间： {:.2f} 秒".format(elapsed_time))
 输出：
 ```
 从../data/blue archive.pkl初始化dataframe完成  # 这是自带的初始化输出
-['F:/图片存储 Picture/blue archive/官图/arona.jpg']  # 原图的搜索结果
-['F:/图片存储 Picture/blue archive/官图/arona.jpg']  # 近似图的搜索结果
+['F:/Picture/blue archive/官图/arona.jpg']  # 原图的搜索结果
+['F:/Picture/blue archive/官图/arona.jpg']  # 近似图的搜索结果
 总时间： 0.11 秒  # 总时间
 ```
 

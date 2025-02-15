@@ -1,5 +1,5 @@
 import imagehash
-from scipy.spatial.distance import hamming, euclidean, cosine
+from scipy.spatial.distance import hamming, cosine
 from PIL import Image
 import numpy as np
 
@@ -8,7 +8,8 @@ class HashPic:
     def __init__(self):
         pass
 
-    def get_hash(self, img, hash_type='phash'):
+    @staticmethod
+    def get_hash(img, hash_type='phash'):
         """
         获取图片的hash值
         :param img: np.ndarray，图片
@@ -32,7 +33,8 @@ class HashPic:
 
         return np.array(hash_value.hash).flatten()
 
-    def cal_hash_distance(self, hash1, hash2, cal_type="hamming"):
+    @staticmethod
+    def cal_hash_distance(hash1, hash2, cal_type="hamming"):
         """
         根据两个图片hash计算相似度
         :param hash1: np.ndarray，图1的hash
@@ -42,11 +44,9 @@ class HashPic:
         """
         if cal_type == "hamming":
             distance = hamming(hash1, hash2)
-        # elif cal_type == "euclidean":
-        #     distance = euclidean(hash1, hash2)  # TypeError: numpy boolean subtract, the `-` operator is not supported
         elif cal_type == "cosine":
             distance = cosine(hash1, hash2)
         else:
-            raise ValueError("Unsupported calculation type. Choose from ['hamming', 'euclidean', 'cosine']")
+            raise ValueError("Unsupported calculation type. Choose from ['hamming', 'cosine']")
 
         return distance

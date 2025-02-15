@@ -1,13 +1,18 @@
 import os
 import sys
-
+import time
 import cv2
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from Tools.pic_util import HashPic
+
+
+# # 在import cv2前设置，避免libpng warning: iCCP: known incorrect sRGB profile
+# os.environ['OPENCV_IO_IGNORE_ICC_PROFILE'] = '1'  # 注: 此方法无效（即使放在import cv2前面也无效），我红温了
+
 
 # 读取一张图片
 def read_image(img_path, gray_pic=False, show_details=False):
@@ -17,7 +22,7 @@ def read_image(img_path, gray_pic=False, show_details=False):
         path = 'input'
         img = read_image(path, gray_pic=True, show_details=True)  # 读取为灰度图
     [Tips]:
-        1.使用cv2.imread()读取图片时，如果路径中含有中文，会导致读取失败，可以使用cv2.imdecode()解决，如下：
+        1.使用cv2.imread()读取图片时，如果路径中含有中文，会导致读取失败，可以使用cv2.imdecode()解决，具体如下：
           先使用np.fromfile()取得二进制数据，再使用cv2.imdecode()解码，-1代表自动检测图像的颜色通道数和位深度。
     :param img_path: 图像路径
     :param gray_pic: 是否读取灰度图像
@@ -25,7 +30,7 @@ def read_image(img_path, gray_pic=False, show_details=False):
     :return: img, 图像数组，类型为np.ndarray。大小是(H, W, 3)或(H, W)
     """
     if gray_pic:
-        # img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+        # img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)  # 不使用该方法的原因见函数注释的Tips
         img = cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), -1)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     else:
@@ -43,8 +48,9 @@ def read_image(img_path, gray_pic=False, show_details=False):
         plt.close()
     return img
 
+
 # 读取文件夹下的所有图片
-def read_imgs(path, gray_pic=False, show_details=False):
+def read_images(path, gray_pic=False, show_details=False):
     """
     读取文件夹下的所有图片
     [使用示例]：
@@ -71,7 +77,6 @@ def read_imgs(path, gray_pic=False, show_details=False):
         # print("文件:", files)
         for file in files:
             if file.endswith('.jpg') or file.endswith('.png') or file.endswith('.jpeg'):
-
                 # print("相对路径", os.path.join(root, file))
                 # print("绝对路径", os.path.abspath(os.path.join(root, file)))
 
@@ -82,81 +87,187 @@ def read_imgs(path, gray_pic=False, show_details=False):
 
     return imgs_dict
 
+
 # 将某个文件夹下的所有图片读取为所需要的dataframe
 def imgs2df(path, hash_type='phash', save_path=None, log_callback=None):
     """
     将某个文件夹下的所有图片读取为所需要的dataframe
     :param path: 文件夹路径
-    :param hash_type: 暂时只使用phash
+    :param hash_type: 暂时只能使用phash
     :param save_path: 保存路径
     :param log_callback: 日志传回到QT里去
     :return: df: dataframe，有七列：
-        "id"是递增序列(用于查询图片)，"path"是图片的绝对路径，"hash"是图片的hash值(phash)，"size"是图片的占据的空间大小，
-        "shape"是图片的shape，"mean"是图片的像素均值，"25p"将图片变为的5*5大小之后的像素
+        "id"是递增序列(用于查询图片)，"path"是图片的绝对路径，"hash"是图片的hash值(phash)，"size"是h*w*c，
+        "shape"是(h,w,c)，"mean"是图片的像素均值
     """
     # 检查path是否存在
     if not os.path.exists(path):
-        raise FileNotFoundError(f"[imgs2df]路径不存在：{path}")
+        raise FileNotFoundError(f"[imgs2df] 路径不存在：{path}")
     if hash_type != 'phash':
-        raise ValueError("[imgs2df]虽然HashPic这个类已经支持多种hash方法，但为了减少可能的错误，"
+        raise ValueError("[imgs2df]虽然HashPic这个类已经支持多种hash方法，但因为其余地方不全支持其余hash方法，"
+                         "并且计算多种hash也需要时间，为了加快构建速度并减少可能的错误，"
                          "目前imgs2df只写了phash这一种方法，如有需求请删除这个ValueError")
 
-    data = []
-    hp = HashPic()
-    file_list = []
+    file_list = []  # 图片绝对路径
     for root, dirs, files in os.walk(path):
         for file in files:
-            # 'bmp', 'tiff' 没测试过
+            # 注意：'bmp', 'tiff' 没测试过
             if file.endswith(('jpg', 'jpeg', 'png', 'bmp', 'tiff')):
                 file_path = os.path.join(root, file)
                 file_path = os.path.abspath(file_path).replace('\\', '/')
                 file_list.append(file_path)
     file_list_length = len(file_list)
 
-    for idx, file_path in enumerate(file_list):
-        img = read_image(file_path, gray_pic=False, show_details=False)
-        if img is not None:
+    start_time = time.time()
+    data = []
+    total_processed = 0
+
+    def process_file(file_path):
+        """ 多线程处理单个文件的函数 """
+        try:
+            img = read_image(file_path, gray_pic=False, show_details=False)
+            if img is None:
+                return None
+            hp = HashPic()  # 每个线程独立实例保证线程安全
             hash_value = hp.get_hash(img, hash_type)
-            size, shape, mean, pixel_25p = get_image_info(img)
-            # 注释是运行时间，以365张BA的图为例：
-            # read_image是9.076秒，get_image_info是13.849秒，imgs2df合计26.117秒
-            data.append({
-                'id': len(data),
+            size, shape, mean = get_image_info(img)
+            del img
+            return {
                 'path': file_path,
-                'hash': hash_value,  # 365    0.056    0.000    1.770    0.005 __init__.py:260(phash)
+                'hash': hash_value,
                 'size': size,
                 'shape': shape,
-                'mean': mean,  # 730    0.003    0.000    1.611    0.002 fromnumeric.py:3385(mean)
-                # 'std': std,  # 365    0.002    0.000   10.589    0.029 fromnumeric.py:3513(std)，时间太长不要了
-                '25p': pixel_25p  # 365    1.653    0.005    1.653    0.005 {resize}
-            })
-            del img
-        log_text = f"已经读取第{idx + 1}/{file_list_length}张图片"
-        print(f"\r{log_text}", end='')
-        if log_callback:
-            log_callback(log_text)  # 传回到QT界面
-        if idx % 100 == 0:
-            print("\ndata占用的存储空间为：", sys.getsizeof(data) / (1024 * 1024), "MB")
-            df = pd.DataFrame(data, columns=['id', 'path', 'hash', 'size', 'shape', 'mean', 'std', '25p'])
-            df.to_pickle(save_path)
-            print(f"已保存{idx}行的dataframe")
-            del df
+                'mean': mean,
+            }
+        except Exception as e:
+            if log_callback:
+                log_callback(f"处理失败: {file_path} - {str(e)}")
+            return None
 
-    df = pd.DataFrame(data, columns=['id', 'path', 'hash', 'size', 'shape', 'mean', 'std', '25p'])
+    # 使用线程池并行处理
+    with ThreadPoolExecutor() as executor:
+        # 提交所有任务
+        futures = {executor.submit(process_file, fp): fp for fp in file_list}
+
+        # 实时处理完成的任务
+        for future in as_completed(futures):
+            total_processed += 1
+
+            # 更新进度日志
+            log_msg = f"已处理第 {total_processed}/{file_list_length} 张图片"
+            print(f"\r[imgs2df] {log_msg}", end='')
+            if log_callback:
+                log_callback(log_msg)  # 传回到QT界面
+
+            # 获取处理结果
+            result = future.result()
+            if result:
+                # 分配递增ID
+                result['id'] = len(data)
+                data.append(result)
+
+                # 定期保存（每100个任务保存一次）
+                if total_processed % 100 == 0:
+                    df = pd.DataFrame(data)
+                    if save_path:
+                        df.to_pickle(save_path)
+                        print(f"\n[保存进度] 已处理{len(data)}条数据", end='')
+                        data_size = sys.getsizeof(data) / (1024 * 1024)
+                        print(f"\n[imgs2df] data占用{data_size:.2f} MB, 已保存{total_processed}行到{save_path}")
+                    del df
+    df = pd.DataFrame(data)
     df.to_pickle(save_path)
-    print(f"\n[imgs2df]dataframe已全部保存到{save_path}")
+    print(f"\n[imgs2df] dataframe已全部保存到{save_path}")
+
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    # 计算每张图片的耗时
+    elapsed_time_per_img = elapsed_time / file_list_length
+    print(f"[imgs2df] 总耗时: {elapsed_time:.2f} 秒, 每张图片耗时: {elapsed_time_per_img:.4f} 秒")
     return df
+
+
+# 将某个文件夹下的所有图片读取为所需要的dataframe，这是先前的版本，作为备份
+# def imgs2df(path, hash_type='phash', save_path=None, log_callback=None):
+#     """
+#     将某个文件夹下的所有图片读取为所需要的dataframe
+#     :param path: 文件夹路径
+#     :param hash_type: 暂时只能使用phash
+#     :param save_path: 保存路径
+#     :param log_callback: 日志传回到QT里去
+#     :return: df: dataframe，有七列：
+#         "id"是递增序列(用于查询图片)，"path"是图片的绝对路径，"hash"是图片的hash值(phash)，"size"是h*w*c，
+#         "shape"是(h,w,c)，"mean"是图片的像素均值，"25p"将图片变为的5*5大小之后的像素
+#     """
+#     # 检查path是否存在
+#     if not os.path.exists(path):
+#         raise FileNotFoundError(f"[imgs2df] 路径不存在：{path}")
+#     if hash_type != 'phash':
+#         raise ValueError("[imgs2df]虽然HashPic这个类已经支持多种hash方法，但因为其余地方不全支持其余hash方法，"
+#                          "并且计算多种hash也需要时间，为了加快构建速度并减少可能的错误，"
+#                          "目前imgs2df只写了phash这一种方法，如有需求请删除这个ValueError")
+#
+#     file_list = []  # 图片绝对路径
+#     for root, dirs, files in os.walk(path):
+#         for file in files:
+#             # 注意：'bmp', 'tiff' 没测试过
+#             if file.endswith(('jpg', 'jpeg', 'png', 'bmp', 'tiff')):
+#                 file_path = os.path.join(root, file)
+#                 file_path = os.path.abspath(file_path).replace('\\', '/')
+#                 file_list.append(file_path)
+#     file_list_length = len(file_list)
+#
+#     data = []  # 图片信息
+#     hp = HashPic()
+#     start_time = time.time()
+#     for idx, file_path in enumerate(file_list):
+#         img = read_image(file_path, gray_pic=False, show_details=False)
+#         if img is not None:
+#             hash_value = hp.get_hash(img, hash_type)
+#             size, shape, mean, pixel_25p = get_image_info(img)
+#             data.append({
+#                 'id': len(data),
+#                 'path': file_path,
+#                 'hash': hash_value,
+#                 'size': size,
+#                 'shape': shape,
+#                 'mean': mean,
+#                 '25p': pixel_25p
+#             })
+#             del img
+#         log_text = f"已经读取第{idx + 1}/{file_list_length}张图片"
+#         print(f"\r[imgs2df] {log_text}", end='')
+#         if log_callback:
+#             log_callback(log_text)  # 传回到QT界面
+#         if idx % 100 == 0:
+#             df = pd.DataFrame(data, columns=['id', 'path', 'hash', 'size', 'shape', 'mean', '25p'])
+#             df.to_pickle(save_path)
+#             data_size = sys.getsizeof(data) / (1024 * 1024)
+#             print(f"\n[imgs2df] data占用的存储空间为：{data_size:.2f} MB, 已保存{idx}行的dataframe到{save_path}")
+#             del df
+#
+#     df = pd.DataFrame(data, columns=['id', 'path', 'hash', 'size', 'shape', 'mean', '25p'])
+#     df.to_pickle(save_path)
+#     print(f"\n[imgs2df] dataframe已全部保存到{save_path}")
+#
+#     end_time = time.time()
+#     elapsed_time = end_time - start_time
+#     # 计算每张图片的耗时
+#     elapsed_time_per_img = elapsed_time / file_list_length
+#     print(f"[imgs2df] 总耗时: {elapsed_time:.2f} 秒, 每张图片耗时: {elapsed_time_per_img:.4f} 秒")
+#     return df
+
 
 # 获取图片的信息
 def get_image_info(img):
     """
     获取图片的信息
     :param img: np.ndarray，图片数组
-    :return: size, shape, mean, std, pixel_25p
+    :return: size, shape, mean
     """
     size = img.size
     shape = img.shape
     mean = np.mean(img)
-    resized_img = cv2.resize(img, (5, 5), interpolation=cv2.INTER_AREA)
-    pixel_25p = resized_img.flatten()
-    return size, shape, mean, pixel_25p
+    # resized_img = cv2.resize(img, (5, 5), interpolation=cv2.INTER_NEAREST)  # 原先是INTER_AREA，速度慢一些
+    # pixel_25p = resized_img.flatten()
+    return size, shape, mean
