@@ -122,10 +122,10 @@ def imgs2df(path, hash_type='phash', save_path=None, log_callback=None):
     data = []
     total_processed = 0
 
-    def process_file(file_path):
+    def process_img(img_path):
         """ 多线程处理单个文件的函数 """
         try:
-            img = read_image(file_path, gray_pic=False, show_details=False)
+            img = read_image(img_path, gray_pic=False, show_details=False)
             if img is None:
                 return None
             hp = HashPic()  # 每个线程独立实例保证线程安全
@@ -133,7 +133,7 @@ def imgs2df(path, hash_type='phash', save_path=None, log_callback=None):
             size, shape, mean = get_image_info(img)
             del img
             return {
-                'path': file_path,
+                'path': img_path,
                 'hash': hash_value,
                 'size': size,
                 'shape': shape,
@@ -141,13 +141,13 @@ def imgs2df(path, hash_type='phash', save_path=None, log_callback=None):
             }
         except Exception as e:
             if log_callback:
-                log_callback(f"处理失败: {file_path} - {str(e)}")
+                log_callback(f"处理失败: {img_path} - {str(e)}")
             return None
 
     # 使用线程池并行处理
     with ThreadPoolExecutor() as executor:
         # 提交所有任务
-        futures = {executor.submit(process_file, fp): fp for fp in file_list}
+        futures = {executor.submit(process_img, fp): fp for fp in file_list}
 
         # 实时处理完成的任务
         for future in as_completed(futures):
@@ -171,7 +171,6 @@ def imgs2df(path, hash_type='phash', save_path=None, log_callback=None):
                     df = pd.DataFrame(data)
                     if save_path:
                         df.to_pickle(save_path)
-                        print(f"\n[保存进度] 已处理{len(data)}条数据", end='')
                         data_size = sys.getsizeof(data) / (1024 * 1024)
                         print(f"\n[imgs2df] data占用{data_size:.2f} MB, 已保存{total_processed}行到{save_path}")
                     del df

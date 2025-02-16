@@ -23,7 +23,7 @@ pd.set_option('display.width', None)  # 不换行
 # img_origin = read_image(path_origin, gray_pic=False, show_details=False)
 # img_similar = read_image(path_similar, gray_pic=False, show_details=False)
 
-path_origin = "../search/白州梓_模糊.jpg"
+path_origin = "../search/白州梓.png"
 img_origin = read_image(path_origin, gray_pic=False, show_details=False)
 
 start_time = time.time()
@@ -34,7 +34,7 @@ elapsed_time = end_time - start_time
 print("初始化： {:.2f} 秒".format(elapsed_time))
 
 start_time = time.time()
-ans = sp.search_similar(img_origin)
+ans = sp.search_origin(img_origin)
 print(ans)
 end_time = time.time()
 elapsed_time = end_time - start_time

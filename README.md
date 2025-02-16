@@ -39,7 +39,7 @@ print("总时间： {:.2f} 秒".format(elapsed_time))
 ```
 输出：
 ```
-从../data/blue archive.pkl初始化dataframe完成  # 这是自带的初始化输出
+[init_pic_df] 从../assets/blue archive.pkl初始化dataframe完成  # 这是自带的初始化输出
 ['F:/Picture/blue archive/官图/arona.jpg']  # 原图的搜索结果
 ['F:/Picture/blue archive/官图/arona.jpg']  # 近似图的搜索结果
 总时间： 0.11 秒  # 总时间

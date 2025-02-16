@@ -1,7 +1,5 @@
 import numpy as np
-import cv2
 import os
-import pickle
 import pandas as pd
 
 from Tools.read_pic import imgs2df, read_image
@@ -20,7 +18,7 @@ class SP:
         """
         初始化图片数据
         :param path_local: 本地图库路径
-        :param save_name: 保存的模型名，默认是f"../data/{save_name}.pkl"
+        :param save_name: 保存的模型名，默认是f"../assets/{save_name}.pkl"
         :param save_path: 主动指定保存模型的完整路径
         :param log_callback: 日志回调函数，用于将日志传回到QT里去
         :return:
@@ -31,7 +29,7 @@ class SP:
             if save_name is None:
                 # save_path 取 path_local 的最后一个文件夹名
                 save_name = path_local.split('/')[-1]
-            save_path = f"../data/{save_name}.pkl"
+            save_path = f"../assets/{save_name}.pkl"
         # 检查save_path是否存在，如果存在就直接读取，否则就重新生成
         if os.path.exists(save_path):
             df = pd.read_pickle(save_path)
@@ -94,8 +92,7 @@ class SP:
                     continue
                 local_img_path = row['path']
                 # self.id_similar.append(row["id"])
-                self.id_result.append(row["id"])
-                # 这里最好还比较一次原像素点，但是我开摆了
+                self.id_result.append(row["id"])  # 记录匹配到的图片的id，如果后续需要，可以用这个id去df里取数据
                 found_paths_with_sim.append((sim, local_img_path))
         # 根据 sim 对 found_paths_with_sim 进行排序
         found_paths_with_sim.sort(key=lambda x: x[0])

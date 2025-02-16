@@ -400,7 +400,7 @@ class Win_Local(QWidget):
 
     # 从model_name到model_path
     def __model_name2model_path(self):
-        initial_path = "../data/"
+        initial_path = "../assets/"
         initial_path = os.path.abspath(initial_path)
         initial_path = os.path.normpath(initial_path).replace("\\", "/")
         self.model_path = f"{initial_path}/{self.model_name}.pkl"
