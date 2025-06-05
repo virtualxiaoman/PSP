@@ -8,6 +8,8 @@
 
 ## 2.快速开始
 
+### 2.1 Quick Start --- python
+
 `git clone https://github.com/virtualxiaoman/PSP.git`
 然后配置环境（下面两个方法二选一），请将路径改为自己的虚拟环境地址：
 ```bash
@@ -60,6 +62,14 @@ G:\venv\torch_venv\Scripts\python.exe E:\py_proj\picspic\Tools\quick_start.py
 进程已结束，退出代码为 0
 ```
 
+### 2.2 Quick Start --- GUI：
+<div align="center">
+    <img src="assets/界面.png" width="80%">
+</div>
+左上图是剪贴板里自动获取的待搜索的图片，左下图是搜索结果预览图，右侧列表是搜索结果。操作不难就不逐步介绍了。
+
+
+
 ## 3.功能展示
 
 注意：本部分功能在线程实现前测的，线程实现后速度会更快，只需要原先大约1/5的时间。
@@ -77,39 +87,6 @@ G:\venv\torch_venv\Scripts\python.exe E:\py_proj\picspic\Tools\quick_start.py
 
 （查原图慢一些的原因是：需要更精确的匹配，也就是逐像素点匹配）
 
-**Quick Start --- py：**
-
-请注意更换为你自己的图片路径，另外第一次运行时会初始化图库数据，需要一定时间，第二次运行就很快了。
-```python
-path_origin = '../search/阿洛娜_原图.jpg'
-path_similar = '../search/阿洛娜_水印_重复.jpg'
-img_origin = read_image(path_origin, gray_pic=False, show_details=False)
-img_similar = read_image(path_similar, gray_pic=False, show_details=False)
-
-start_time = time.time()
-sp = SP()
-sp.init_pic_df(path_local='F:/Picture/blue archive')
-ans = sp.search_origin(img_origin)
-print(ans)
-ans = sp.search_similar(img_similar)
-print(ans)
-end_time = time.time()
-elapsed_time = end_time - start_time
-print("总时间： {:.2f} 秒".format(elapsed_time))
-```
-输出：
-```
-[init_pic_df] 从../assets/blue archive.pkl初始化dataframe完成  # 这是自带的初始化输出
-['F:/Picture/blue archive/官图/arona.jpg']  # 原图的搜索结果
-['F:/Picture/blue archive/官图/arona.jpg']  # 近似图的搜索结果
-总时间： 0.11 秒  # 总时间
-```
-
-**Quick Start --- GUI：**
-<div align="center">
-    <img src="assets/界面.png" width="80%">
-</div>
-左上图是剪贴板里自动获取的待搜索的图片，左下图是搜索结果预览图，右侧列表是搜索结果。操作不难就不逐步介绍了。
 
 **注意：**
 1. 目前就是**初始化图库数据**(模型文件)比较慢，后续会优化。（估计开个多线程？）
