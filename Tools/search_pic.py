@@ -70,7 +70,7 @@ class SP:
         return found_paths
 
     # 搜索近似图片(不支持局部搜索)，先查验phash，找出phash小于threshold(0.1)的
-    def search_similar(self, input_img, hash_threshold=0.2, mean_threshold=20):
+    def search_similar(self, input_img, hash_threshold=0.2, mean_threshold=70):
         """
         搜差不多的原图(允许小规模水印)
         :param input_img: np.array 待搜索的图片数组
@@ -83,12 +83,15 @@ class SP:
         input_hash = hp.get_hash(input_img, "phash")
 
         found_paths_with_sim = []
+        # print(self.df)
         for index, row in self.df.iterrows():
             sim = hp.cal_hash_distance(input_hash, row["hash"])
             if sim < hash_threshold:
                 input_mean = np.mean(input_img)
                 local_mean = row["mean"]
+                print("\r[search_similar] input_mean:", input_mean, "local_mean:", local_mean, end=' ')
                 if abs(input_mean - local_mean) > mean_threshold:
+                    print(f"\r[search_similar] 忽略 {row['path']}，均值差异过大{input_mean} vs {local_mean}", end=' ')
                     continue
                 local_img_path = row['path']
                 # self.id_similar.append(row["id"])

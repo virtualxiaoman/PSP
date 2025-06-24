@@ -50,9 +50,11 @@ class SPSearch(QThread):
         self.sp = SP()
         self.sp.init_pic_df(save_path=self.model_path)
         result_list = []
+        print(self.search_choice)
         if self.search_choice == "ori":
             result_list = self.sp.search_origin(self.img, max_result=self.ori_num)
         elif self.search_choice == "sim":
+            # print(self.img.shape)
             result_list = self.sp.search_similar(self.img, hash_threshold=self.sim_threshold)
         self.result_list.emit(result_list)
 
@@ -325,6 +327,7 @@ class Win_Local(QWidget):
                 (self.sim_threshold > 1 or self.sim_threshold < 0):
             self.Label_search_tip.setText(f"容忍度{self.sim_threshold}设置错误，请重新设置")
             return False
+        print(f"[search_sp] model_path: {self.model_path}, search_choice: {self.search_choice}")
         self.thread = SPSearch(img, self.model_path, self.search_choice, self.ori_num, self.sim_threshold)
         self.thread.result_list.connect(self.__update_result_list)
         self.thread.start()
@@ -487,6 +490,7 @@ class Win_Local(QWidget):
             self.image_label1.setPixmap(pixmap.scaled(self.image_label1.size(), Qt.AspectRatioMode.KeepAspectRatio))
             # 将QImage转为numpy数组
             img = self.__qimage2np(image)
+            # print(img.shape)
             # 使用模型搜索图片
             self.search_sp(img)
         else:

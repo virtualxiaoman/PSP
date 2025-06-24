@@ -174,6 +174,10 @@ def imgs2df(path, hash_type='phash', save_path=None, log_callback=None):
                         data_size = sys.getsizeof(data) / (1024 * 1024)
                         print(f"\n[imgs2df] data占用{data_size:.2f} MB, 已保存{total_processed}行到{save_path}")
                     del df
+    # print(data)
+    # print(save_path)
+    # 查看绝对路径
+    print(f"[imgs2df] 保存路径: {os.path.abspath(save_path)}")
     df = pd.DataFrame(data)
     df.to_pickle(save_path)
     print(f"\n[imgs2df] dataframe已全部保存到{save_path}")
