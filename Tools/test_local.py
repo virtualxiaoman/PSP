@@ -158,7 +158,6 @@ if __name__ == "__main__":
 
     top_matches = gallery_manager.match_image(user_image_path, top_k=5)
 
-
     # 打印结果
     print("Top matches:")
     for i, match in enumerate(top_matches):

@@ -21,4 +21,6 @@ end_time = time.time()
 elapsed_time = end_time - start_time
 print("总时间： {:.2f} 秒".format(elapsed_time))
 
-print(sp.df.head(10))
+print(sp.df.head)
+# 查看其中的dino这一列
+print(sp.df['dino'].head())

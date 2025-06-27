@@ -112,6 +112,12 @@ def imgs2df(path, hash_type='phash', save_path=None, log_callback=None):
                          "并且计算多种hash也需要时间，为了加快构建速度并减少可能的错误，"
                          "目前imgs2df只写了phash这一种方法，如有需求请删除这个ValueError")
 
+    # 加载模型
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = LocalMatcher().to(device)
+    model.load_state_dict(torch.load("../assets/checkpoint_epoch_14.pth", map_location=device))
+    model.eval()
+
     file_list = []  # 图片绝对路径
     for root, dirs, files in os.walk(path):
         for file in files:
@@ -135,7 +141,7 @@ def imgs2df(path, hash_type='phash', save_path=None, log_callback=None):
             hp = HashPic()  # 每个线程独立实例保证线程安全
             hash_value = hp.get_hash(img, hash_type)
             size, shape, mean = get_image_info_ml(img)
-            # dinov2_feature = get_image_info_dl(img)  # 获取Dinov2特征向量
+            dinov2_feature = get_image_info_dl(img, device, model)  # 获取Dinov2特征向量
             del img
             return {
                 'path': img_path,
@@ -143,7 +149,7 @@ def imgs2df(path, hash_type='phash', save_path=None, log_callback=None):
                 'size': size,
                 'shape': shape,
                 'mean': mean,
-                # 'dino': dinov2_feature
+                'dino': dinov2_feature
             }
         except Exception as e:
             if log_callback:
@@ -282,18 +288,19 @@ def get_image_info_ml(img):
     return size, shape, mean
 
 
-def get_image_info_dl(img):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # 加载模型
-    model = LocalMatcher().to(device)
-    model.load_state_dict(torch.load("../assets/checkpoint_epoch_14.pth", map_location=device))
-    model.eval()
-
+def get_image_info_dl(img, device, model):
+    """
+    (H, W, C) -> (1, C, 224, 224) -> 1, 768(Dinov2特征向量)
+    :param img:
+    :param device:
+    :param model:
+    :return:
+    """
+    print(111)
     # 预处理原始图像
     transform = transforms.Compose([
-        transforms.Resize((224, 224)),
         transforms.ToTensor(),
+        transforms.Resize((224, 224)),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
     # original_input = original_transform(img).unsqueeze(0).to(device)  # [1, 3, 224, 224]
@@ -304,11 +311,24 @@ def get_image_info_dl(img):
     #
     # return feature.squeeze(0).cpu()  # 移除批次维度 [C, H, W] 或 [D]
     img_tensor = transform(img).unsqueeze(0).to(device)
+    print(img_tensor.shape)
     with torch.no_grad():
         dinov2_feature = model.backbone(img_tensor)
     print(dinov2_feature.shape)  # 输出特征向量的形状
     return dinov2_feature
 
+
+if __name__ == "__main__":
+    # 测试读取单张图片
+    img_path = "F:/Picture/pixiv/BA/110182236_p0.jpg"
+    img = read_image(img_path, gray_pic=False, show_details=False)
+    print(f"读取图片形状: {img.shape}")
+    # 加载模型
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = LocalMatcher().to(device)
+    model.load_state_dict(torch.load("../assets/checkpoint_epoch_14.pth", map_location=device))
+    model.eval()
+    get_image_info_dl(img, device, model)  # 获取Dinov2特征向量
 
 # class FeatureExtractor:
 #     def __init__(self, model_path="../assets/checkpoint_epoch_14.pth", backbone='dinov2_vitb14'):
