@@ -4,7 +4,7 @@ import cv2
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QButtonGroup, \
     QLineEdit, QStackedLayout, QListWidget, QApplication
 from PyQt6.QtCore import QThread, pyqtSignal
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtCore import Qt
 
 from Tools.search_pic import SP
@@ -526,6 +526,40 @@ class Win_Local(QWidget):
         print(self.result_list)
 
     # QImage转numpy数组
+    # def __qimage2np(self, qimage):
+    #     """
+    #     本函数有bug。将QImage转换为numpy数组，正确处理图像格式和内存布局
+    #     :param qimage: QImage对象
+    #     :return: numpy数组 (height, width, channels)
+    #     """
+    #     # 转换为标准格式：RGB888
+    #     qimage = qimage.convertToFormat(QImage.Format.Format_RGB888)
+    #
+    #     width = qimage.width()
+    #     height = qimage.height()
+    #     bytes_per_line = qimage.bytesPerLine()
+    #
+    #     # 获取图像数据指针
+    #     ptr = qimage.constBits()
+    #
+    #     # 计算实际需要的字节数（无填充）
+    #     expected_bytes_per_line = width * 3
+    #
+    #     if bytes_per_line == expected_bytes_per_line:
+    #         # 无填充：可以直接创建连续数组
+    #         arr = np.array(ptr).reshape((height, width, 3))
+    #     else:
+    #         # 有填充：逐行复制数据
+    #         arr = np.empty((height, width, 3), dtype=np.uint8)
+    #         for y in range(height):
+    #             # 获取每行数据的起始位置
+    #             line_start = y * bytes_per_line
+    #             # 复制有效数据（跳过填充字节）
+    #             line_data = np.array(ptr[line_start:line_start + expected_bytes_per_line],
+    #                                  dtype=np.uint8, copy=False)
+    #             arr[y] = line_data.reshape((width, 3))
+    #
+    #     return arr
     def __qimage2np(self, qimage):
         """
         将QImage转换为numpy数组

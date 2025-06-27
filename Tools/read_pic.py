@@ -6,7 +6,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import torch
+from PIL import Image
+from torchvision import transforms
 
+from Tools.local_matcher import LocalMatcher
 from Tools.pic_util import HashPic
 
 
@@ -130,7 +134,8 @@ def imgs2df(path, hash_type='phash', save_path=None, log_callback=None):
                 return None
             hp = HashPic()  # 每个线程独立实例保证线程安全
             hash_value = hp.get_hash(img, hash_type)
-            size, shape, mean = get_image_info(img)
+            size, shape, mean = get_image_info_ml(img)
+            # dinov2_feature = get_image_info_dl(img)  # 获取Dinov2特征向量
             del img
             return {
                 'path': img_path,
@@ -138,6 +143,7 @@ def imgs2df(path, hash_type='phash', save_path=None, log_callback=None):
                 'size': size,
                 'shape': shape,
                 'mean': mean,
+                # 'dino': dinov2_feature
             }
         except Exception as e:
             if log_callback:
@@ -262,7 +268,7 @@ def imgs2df(path, hash_type='phash', save_path=None, log_callback=None):
 
 
 # 获取图片的信息
-def get_image_info(img):
+def get_image_info_ml(img):
     """
     获取图片的信息
     :param img: np.ndarray，图片数组
@@ -274,3 +280,72 @@ def get_image_info(img):
     # resized_img = cv2.resize(img, (5, 5), interpolation=cv2.INTER_NEAREST)  # 原先是INTER_AREA，速度慢一些
     # pixel_25p = resized_img.flatten()
     return size, shape, mean
+
+
+def get_image_info_dl(img):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # 加载模型
+    model = LocalMatcher().to(device)
+    model.load_state_dict(torch.load("../assets/checkpoint_epoch_14.pth", map_location=device))
+    model.eval()
+
+    # 预处理原始图像
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+    # original_input = original_transform(img).unsqueeze(0).to(device)  # [1, 3, 224, 224]
+    # with torch.no_grad():
+    #     # print(f"original_input shape: {original_input.shape}, crop_img shape: {crop_img.shape}")
+    #     output = model(original_input, crop_img)
+    #     probability = torch.sigmoid(output).item()
+    #
+    # return feature.squeeze(0).cpu()  # 移除批次维度 [C, H, W] 或 [D]
+    img_tensor = transform(img).unsqueeze(0).to(device)
+    with torch.no_grad():
+        dinov2_feature = model.backbone(img_tensor)
+    print(dinov2_feature.shape)  # 输出特征向量的形状
+    return dinov2_feature
+
+
+# class FeatureExtractor:
+#     def __init__(self, model_path="../assets/checkpoint_epoch_14.pth", backbone='dinov2_vitb14'):
+#         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#
+#         # 加载模型但不加载匹配头
+#         self.model = torch.hub.load('facebookresearch/dinov2', backbone).to(self.device)
+#
+#         # 加载完整模型状态，然后只保留backbone部分
+#         full_model = LocalMatcher(backbone)
+#         full_model.load_state_dict(torch.load(model_path, map_location=self.device))
+#         self.model.load_state_dict(full_model.backbone.state_dict())
+#
+#         self.model.eval()
+#         self.transform = transforms.Compose([
+#             transforms.Resize((224, 224)),
+#             transforms.ToTensor(),
+#             transforms.Normalize(mean=[0.485, 0.456, 0.406],
+#                                  std=[0.229, 0.224, 0.225]),
+#         ])
+#
+#     def extract_feature(self, image_path):
+#         """提取单张图片的特征向量"""
+#         img = Image.open(image_path).convert("RGB")
+#         input_tensor = self.transform(img).unsqueeze(0).to(self.device)  # [1, 3, 224, 224]
+#
+#         with torch.no_grad():
+#             feature = self.model(input_tensor)
+#
+#         return feature.squeeze(0).cpu()  # 移除批次维度 [feat_dim]
+#
+#
+# # 使用示例
+# if __name__ == "__main__":
+#     extractor = FeatureExtractor()
+#
+#     # 提取单张图片特征
+#     feature_vector = extractor.extract_feature("F:/Picture/pixiv/BA/110182236_p0.jpg")
+#     print(f"特征向量形状: {feature_vector.shape}")
+#     print(f"特征示例: {feature_vector[:5]}")

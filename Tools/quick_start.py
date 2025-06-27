@@ -14,9 +14,11 @@ start_time = time.time()
 sp = SP()
 sp.init_pic_df(path_local='../input')
 ans = sp.search_origin(img_origin)
-print(ans)
+print(ans)  # ['E:/Py-Project/PSP/input/阿洛娜/arona.jpg']
 ans = sp.search_similar(img_similar)
-print(ans)
+print(ans)  # ['E:/Py-Project/PSP/input/白子/Shiroko.jpeg']
 end_time = time.time()
 elapsed_time = end_time - start_time
 print("总时间： {:.2f} 秒".format(elapsed_time))
+
+print(sp.df.head(10))

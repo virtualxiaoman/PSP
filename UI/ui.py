@@ -81,7 +81,7 @@ class PSP_UI(QMainWindow):
         btn_press2.clicked.connect(self.__switch_to_net)
         btn_press3.clicked.connect(self.__switch_to_tip)
         VLayout_btn.addWidget(btn_press1)
-        VLayout_btn.addWidget(btn_press2)
+        # VLayout_btn.addWidget(btn_press2)
         VLayout_btn.addWidget(btn_press3)
         VLayout_btn.addStretch(1)
         btn_widget.setLayout(VLayout_btn)
