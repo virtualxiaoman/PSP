@@ -110,6 +110,8 @@ class GalleryManager:
             query1 = feat1_batch.unsqueeze(1)  # [N, 1, feat_dim]
             key2 = feat2_batch.unsqueeze(1)
             value2 = feat2_batch.unsqueeze(1)
+            print(query1.shape, key2.shape, value2.shape)
+            # torch.Size([427, 1, 768]) torch.Size([427, 1, 768]) torch.Size([427, 1, 768])
             attn1, _ = self.model.cross_attn(query1, key2, value2)
             attn1 = attn1.squeeze(1)  # [N, feat_dim]
 

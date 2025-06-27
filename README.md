@@ -98,13 +98,14 @@ G:\venv\torch_venv\Scripts\python.exe E:\py_proj\picspic\Tools\quick_start.py
 
 3. **构建方法**：`pyinstaller -F --noconsole --icon=UI/data/arona.ico UI/ui.py`。如果上面的报错，就改为`pyinstaller -F --noconsole --icon=UI/data/arona.ico UI/ui.py -p E:/Py-Project/PSP`，其中`-p`后面是你的项目路径，使用`-p`的作用是将项目路径加入到`sys.path`中，这样就可以找到自定义的模块了。
 
+注：25.6.27测试为[imgs2df] 总耗时: 518.78 秒, 每张图片耗时: 0.0928 秒（15.7 GB ，5,610张图）
 
 ## 4.进度
 #### 3.1 本地图片搜索
 - [x] 精确搜索
 - [x] 模糊搜索
 - [ ] 局部搜索
-- [ ] 优化搜索算法、使用VGG16等深度学习模型（可以看docx文档里面有一些思路）
+- [ ] 优化搜索算法、使用~VGG16~等深度学习模型（可以看docx文档里面有一些思路）
 #### 3.2 网络图片搜索
 - [ ] 网络图片搜索
 #### 3.3 GUI

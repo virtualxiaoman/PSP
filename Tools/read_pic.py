@@ -296,7 +296,7 @@ def get_image_info_dl(img, device, model):
     :param model:
     :return:
     """
-    print(111)
+    # print(111)
     # 预处理原始图像
     transform = transforms.Compose([
         transforms.ToTensor(),
@@ -311,11 +311,11 @@ def get_image_info_dl(img, device, model):
     #
     # return feature.squeeze(0).cpu()  # 移除批次维度 [C, H, W] 或 [D]
     img_tensor = transform(img).unsqueeze(0).to(device)
-    print(img_tensor.shape)
+    # print(img_tensor.shape)
     with torch.no_grad():
         dinov2_feature = model.backbone(img_tensor)
-    print(dinov2_feature.shape)  # 输出特征向量的形状
-    return dinov2_feature
+    # print(dinov2_feature.shape)  # 输出特征向量的形状
+    return dinov2_feature.squeeze(0).cpu().numpy()
 
 
 if __name__ == "__main__":
