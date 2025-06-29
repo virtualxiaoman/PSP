@@ -103,7 +103,7 @@ class SP:
                 # print("\r[search_similar] input_mean:", input_mean, "local_mean:", local_mean, end=' ')
                 # print(input_mean - local_mean)
                 if abs(input_mean - local_mean) > mean_threshold:
-                    print(f"\r[search_similar] 忽略 {row['path']}，均值差异过大{input_mean} vs {local_mean}", end=' ')
+                    # print(f"\r[search_similar] 忽略 {row['path']}，均值差异过大{input_mean} vs {local_mean}", end=' ')
                     continue
                 local_img_path = row['path']
                 # self.id_similar.append(row["id"])

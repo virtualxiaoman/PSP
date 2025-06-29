@@ -49,17 +49,22 @@ class SPSearch(QThread):
 
     def run(self):
         self.sp = SP()
+        print(f"[SPSearch] 初始化SP对象，model_path: {self.model_path}, search_choice: {self.search_choice}")
         self.sp.init_pic_df(save_path=self.model_path)
         result_list = []
-        print(self.search_choice)
+        print(f"[SPSearch] model_path: {self.model_path}, search_choice: {self.search_choice}, ", end="")
         # 查看self.img的类型
-        # print(f"[SPSearch] img type: {type(self.img)}, shape: {self.img.shape if isinstance(self.img, np.ndarray) else 'N/A'}")
+        print(
+            f"[SPSearch] img type: {type(self.img)}, shape: {self.img.shape if isinstance(self.img, np.ndarray) else 'N/A'}")
         if self.search_choice == "ori":
+            print(f"ori_num: {self.ori_num}")
             result_list = self.sp.search_origin(self.img, max_result=self.ori_num)
         elif self.search_choice == "sim":
+            print(f"sim_threshold: {self.sim_threshold}")
             # print(self.img.shape)
             result_list = self.sp.search_similar(self.img, hash_threshold=self.sim_threshold)
         elif self.search_choice == "par":
+            print(f"par_topk: {self.par_topk}")
             result_list = self.sp.search_partial(self.img, top_k=self.par_topk)
         self.result_list.emit(result_list)
 
@@ -75,6 +80,7 @@ class Win_Local(QWidget):
         self.result_list = []  # 搜索结果列表
         self.ori_num = -1  # 原图搜索的数量
         self.sim_threshold = 0.2  # 相似图搜索的阈值
+        self.par_topk = 5  # 局部搜索的top_k
         self.init_ui()
 
     def init_ui(self):
@@ -350,7 +356,8 @@ class Win_Local(QWidget):
                 (self.ori_num <= 0):
             self.Label_search_tip.setText(f"搜索数量{self.ori_num}设置错误，请重新设置")
 
-        print(f"[search_sp] model_path: {self.model_path}, search_choice: {self.search_choice}")
+        print(f"[search_sp] model_path: {self.model_path}, search_choice: {self.search_choice}",
+              f" ori_num: {self.ori_num}, sim_threshold: {self.sim_threshold}, par_topk: {self.par_topk}")
         self.thread = SPSearch(img, self.model_path, self.search_choice,
                                self.ori_num, self.sim_threshold, self.par_topk)
         self.thread.result_list.connect(self.__update_result_list)
@@ -632,13 +639,13 @@ class Win_Local(QWidget):
         返回:
             RGB三通道的numpy数组，形状为[H, W, 3]
         """
-        # 检查输入有效性
-        if img.ndim != 3 or img.shape[2] != 4:
-            raise ValueError("输入图像必须是四通道RGBA格式 (H, W, 4)")
-
+        print(f"img.ndim: {img.ndim}, img.shape: {img.shape}")
+        if img.ndim != 3:
+            raise ValueError("输入图像必须是三维数组 (H, W, C)")
         # 如果已经是RGB则直接返回
         if img.shape[2] == 3:
-            return img.copy()
+            return img
+        # 否则是RGBA，进行如下处理：
 
         # 分离通道
         r, g, b, a = [img[:, :, i] for i in range(4)]
