@@ -1,20 +1,20 @@
 import numpy as np
 import os
 import pandas as pd
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, models, datasets
-from torchvision.transforms import functional as F
-from torchvision import transforms
-from PIL import Image
-import matplotlib.pyplot as plt
-
-from Tools.local_matcher import LocalMatcher
+# import torch
+# import torch.nn as nn
+# import torch.optim as optim
+# from torch.utils.data import Dataset, DataLoader
+# from torchvision import transforms, models, datasets
+# from torchvision.transforms import functional as F
+# from torchvision import transforms
+# from PIL import Image
+# import matplotlib.pyplot as plt
+#
+# from Tools.local_matcher import LocalMatcher
 from Tools.read_pic import imgs2df, read_image
 from Tools.pic_util import HashPic
-from Tools.test_local_2 import DFGalleryManager
+from Tools.local_manager import DFGalleryManager
 
 
 class SP:
@@ -81,7 +81,7 @@ class SP:
         return found_paths
 
     # 搜索近似图片(不支持局部搜索)，先查验phash，找出phash小于hash_threshold的
-    def search_similar(self, input_img, hash_threshold=0.2, mean_threshold=70):
+    def search_similar(self, input_img, hash_threshold=0.2, mean_threshold=40):
         """
         搜差不多的原图(允许小规模水印)
         :param input_img: np.array 待搜索的图片数组
@@ -101,6 +101,7 @@ class SP:
                 input_mean = np.mean(input_img)
                 local_mean = row["mean"]
                 # print("\r[search_similar] input_mean:", input_mean, "local_mean:", local_mean, end=' ')
+                # print(input_mean - local_mean)
                 if abs(input_mean - local_mean) > mean_threshold:
                     print(f"\r[search_similar] 忽略 {row['path']}，均值差异过大{input_mean} vs {local_mean}", end=' ')
                     continue
@@ -115,15 +116,15 @@ class SP:
         return found_paths
 
     # 搜索局部图片
-    def search_local(self, input_img, top_k=5):
+    def search_partial(self, input_img, top_k=5):
         manager = DFGalleryManager(
             model_path="../assets/checkpoint_epoch_14.pth",
             df=self.df
         )
+        # print(f"[search_partial] 进行局部图片搜索")
         top_matches = manager.match_image_efficient(input_img, top_k=top_k)  # 含有path和probability
         found_paths = [match['path'] for match in top_matches]
         return found_paths
-
 
 # def demo(original_path, crop_size=224):
 #     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

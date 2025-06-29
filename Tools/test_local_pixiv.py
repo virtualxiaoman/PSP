@@ -4,7 +4,7 @@ import pandas as pd
 from Tools.read_pic import read_image, read_images, imgs2df
 from Tools.pic_util import HashPic
 from Tools.search_pic import SP
-from Tools.test_local_2 import demo_gal
+from Tools.local_manager import demo_gal
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)

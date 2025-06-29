@@ -128,8 +128,8 @@ class DFGalleryManager:
         """
         # 处理用户图片
         # img2 = Image.open(img2_path).convert("RGB")
+        # print(f"[match_image_efficient] {type(img2)}, shape: {getattr(img2, 'shape', 'N/A')}")
         img2_tensor = self.transform(img2).unsqueeze(0).to(self.device)
-
         with torch.no_grad():
             # 提取用户图片特征
             feat2 = self.model.backbone(img2_tensor)
@@ -160,7 +160,6 @@ class DFGalleryManager:
             # 获取top-k结果
             sorted_indices = np.argsort(probabilities)[::-1][:top_k]
             results = []
-
             for idx in sorted_indices:
                 results.append({
                     'path': self.paths[idx],

@@ -31,14 +31,14 @@ print("[ML] 总时间： {:.2f} 秒".format(elapsed_time))  # 0.09 秒
 start_time = time.time()
 sp = SP()
 sp.init_pic_df(path_local='F:/Picture/pixiv')
-ans = sp.search_local(img_local)
+ans = sp.search_partial(img_local, top_k=3)
 print(ans)
 end_time = time.time()
 elapsed_time = end_time - start_time
 print("[DL] 总时间： {:.2f} 秒".format(elapsed_time))  # 9.18 秒(需要把模型加载到GPU上)
 
 start_time = time.time()
-ans = sp.search_local(img_local)
+ans = sp.search_partial(img_local)
 # print(ans)
 end_time = time.time()
 elapsed_time = end_time - start_time

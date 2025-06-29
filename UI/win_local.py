@@ -38,24 +38,29 @@ class SPSearch(QThread):
     finished = pyqtSignal()
     result_list = pyqtSignal(list)
 
-    def __init__(self, img, model_path, search_choice, ori_num=None, sim_threshold=None):
+    def __init__(self, img, model_path, search_choice, ori_num=None, sim_threshold=None, par_topk=None):
         super().__init__()
         self.img = img
         self.model_path = model_path
         self.search_choice = search_choice
         self.ori_num = ori_num
         self.sim_threshold = sim_threshold
+        self.par_topk = par_topk
 
     def run(self):
         self.sp = SP()
         self.sp.init_pic_df(save_path=self.model_path)
         result_list = []
         print(self.search_choice)
+        # 查看self.img的类型
+        # print(f"[SPSearch] img type: {type(self.img)}, shape: {self.img.shape if isinstance(self.img, np.ndarray) else 'N/A'}")
         if self.search_choice == "ori":
             result_list = self.sp.search_origin(self.img, max_result=self.ori_num)
         elif self.search_choice == "sim":
             # print(self.img.shape)
             result_list = self.sp.search_similar(self.img, hash_threshold=self.sim_threshold)
+        elif self.search_choice == "par":
+            result_list = self.sp.search_partial(self.img, top_k=self.par_topk)
         self.result_list.emit(result_list)
 
 
@@ -65,10 +70,11 @@ class Win_Local(QWidget):
         self.local_path = None  # 本地图库路径
         self.model_name = None  # 本地图库模型的名字
         self.model_path = None  # 本地图库模型的路径(完整路径)
-        self.search_choice = "ori"  # 默认设置为"ori"原图搜索。"sim"为相似图搜索。暂不支持"wat"水印搜索、"par"局部搜索
+        # 默认设置为"ori"原图搜索。"sim"为相似图搜索。暂不支持"wat"水印搜索、"par"(partial)局部搜索
+        self.search_choice = "ori"
         self.result_list = []  # 搜索结果列表
         self.ori_num = -1  # 原图搜索的数量
-        self.sim_threshold = 0.1  # 相似图搜索的阈值
+        self.sim_threshold = 0.2  # 相似图搜索的阈值
         self.init_ui()
 
     def init_ui(self):
@@ -144,9 +150,12 @@ class Win_Local(QWidget):
         # 创建按钮
         self.ori_button = QPushButton('原图', self)
         self.sim_button = QPushButton('近似', self)
-        self.mar_button = QPushButton('水印', self)
+        # self.mar_button = QPushButton('水印', self)
         self.par_button = QPushButton('局部', self)
-        for btn in [self.ori_button, self.sim_button, self.mar_button, self.par_button]:
+        # for btn in [self.ori_button, self.sim_button, self.mar_button, self.par_button]:
+        #     btn.setStyleSheet(Button_css.BTN_BLUE_GREEN_CHECK)
+        #     btn.setCheckable(True)
+        for btn in [self.ori_button, self.sim_button, self.par_button]:
             btn.setStyleSheet(Button_css.BTN_BLUE_GREEN_CHECK)
             btn.setCheckable(True)
         self.ori_button.setChecked(True)
@@ -154,20 +163,20 @@ class Win_Local(QWidget):
         self.button_group = QButtonGroup(self)
         self.button_group.addButton(self.ori_button)
         self.button_group.addButton(self.sim_button)
-        self.button_group.addButton(self.mar_button)
+        # self.button_group.addButton(self.mar_button)
         self.button_group.addButton(self.par_button)
         # 设置按钮组互斥
         self.button_group.setExclusive(True)
         # 连接信号
         self.ori_button.clicked.connect(self.__on_search_choice_ori)
         self.sim_button.clicked.connect(self.__on_search_choice_sim)
-        self.mar_button.clicked.connect(self.__on_search_choice_mar)
+        # self.mar_button.clicked.connect(self.__on_search_choice_mar)
         self.par_button.clicked.connect(self.__on_search_choice_par)
 
         H_Layout_searchchoice.addWidget(self.Label_search_choice)
         H_Layout_searchchoice.addWidget(self.ori_button)
         H_Layout_searchchoice.addWidget(self.sim_button)
-        H_Layout_searchchoice.addWidget(self.mar_button)
+        # H_Layout_searchchoice.addWidget(self.mar_button)
         H_Layout_searchchoice.addWidget(self.par_button)
         H_Layout_searchchoice.addStretch(1)
         return H_Layout_searchchoice
@@ -201,7 +210,7 @@ class Win_Local(QWidget):
         self.Input_sim.setPlaceholderText("容忍度")
         self.Input_sim.textChanged.connect(self.__update_sim_threshold)
         self.Input_sim.setStyleSheet(Input_css.INPUT_BLUE_PINK)
-        self.Label_sim_param = QLabel("容忍度(默认为0.1)")
+        self.Label_sim_param = QLabel("容忍度(默认为0.2)")
         sim_layout.addWidget(self.Label_sim_tip)
         sim_layout.addStretch(1)
         sim_layout.addWidget(self.Input_sim)
@@ -220,9 +229,17 @@ class Win_Local(QWidget):
         # 局部提示
         par_widget = QWidget()
         par_layout = QHBoxLayout()
-        self.Label_par = QLabel("当前选择局部搜索，但该功能暂不支持")
-        par_layout.addWidget(self.Label_par)
+        self.Label_par_tip = QLabel("当前选择局部搜索")
+        self.Input_par = QLineEdit()
+        self.Input_par.setPlaceholderText("top_k")
+        self.Input_par.textChanged.connect(self.__update_par_topk)
+        self.Input_par.setStyleSheet(Input_css.INPUT_BLUE_PINK)
+        self.Label_par_param = QLabel("搜索数量(默认为5)")
+        par_layout.addWidget(self.Label_par_tip)
         par_layout.addStretch(1)
+        par_layout.addWidget(self.Input_par)
+        par_layout.addWidget(self.Label_par_param)
+        par_layout.addStretch(30)
         par_widget.setLayout(par_layout)
 
         # 添加到堆叠布局
@@ -312,7 +329,7 @@ class Win_Local(QWidget):
             self.Label_search_tip.setText(f"模型文件{self.model_path}不存在，请先创建模型文件")
             return False
         # 检查search_choice是否正确
-        if self.search_choice not in ["ori", "sim"]:
+        if self.search_choice not in ["ori", "sim", "par"]:
             self.Label_search_tip.setText(f"搜索方式{self.search_choice}选择错误，请重新选择")
             return False
         # 检查ori_num是否正确(要么是-1要么是正整数)
@@ -327,8 +344,15 @@ class Win_Local(QWidget):
                 (self.sim_threshold > 1 or self.sim_threshold < 0):
             self.Label_search_tip.setText(f"容忍度{self.sim_threshold}设置错误，请重新设置")
             return False
+        # 检查par_topk是否正确(只能是正整数)
+        if self.search_choice == "par" and \
+                (not isinstance(self.ori_num, int)) and \
+                (self.ori_num <= 0):
+            self.Label_search_tip.setText(f"搜索数量{self.ori_num}设置错误，请重新设置")
+
         print(f"[search_sp] model_path: {self.model_path}, search_choice: {self.search_choice}")
-        self.thread = SPSearch(img, self.model_path, self.search_choice, self.ori_num, self.sim_threshold)
+        self.thread = SPSearch(img, self.model_path, self.search_choice,
+                               self.ori_num, self.sim_threshold, self.par_topk)
         self.thread.result_list.connect(self.__update_result_list)
         self.thread.start()
 
@@ -451,22 +475,31 @@ class Win_Local(QWidget):
             self.Label_ori_param.setText(f"搜索数量(当前为{self.ori_num})")
         except ValueError:
             self.ori_num = -1
-            self.Label_ori_param.setText(f"搜索数量设置错误，应该是整数(当前为{self.ori_num})")
+            self.Label_ori_param.setText(f"搜索数量设置错误，应该是整数(当前重置为{self.ori_num})")
 
     def __update_sim_threshold(self, text):
         try:
             self.sim_threshold = float(text)
             # 应该小于1
             if self.sim_threshold > 1 or self.sim_threshold < 0:
-                self.sim_threshold = 0.1
+                self.sim_threshold = 0.2
                 print(f"Similarity threshold set to {self.sim_threshold}")
                 self.Label_sim_param.setText(f"容忍度设置错误，只能在0~1之间(当前为{self.sim_threshold})")
             else:
                 print(f"Similarity threshold set to {self.sim_threshold}")
                 self.Label_sim_param.setText(f"容忍度(当前为{self.sim_threshold})")
         except ValueError:
-            self.sim_threshold = 0.1
-            self.Label_sim_param.setText(f"容忍度设置错误，应该是小数(当前为{self.sim_threshold})")
+            self.sim_threshold = 0.2
+            self.Label_sim_param.setText(f"容忍度设置错误，应该是小数(当前重置为{self.sim_threshold})")
+
+    def __update_par_topk(self, text):
+        try:
+            self.par_topk = int(text)
+            print(f"Partial top_k set to {self.par_topk}")
+            self.Label_par_param.setText(f"搜索数量(当前为{self.par_topk})")
+        except ValueError:
+            self.par_topk = 5
+            self.Label_par_param.setText(f"搜索数量设置错误，应该是整数(当前重置为{self.par_topk})")
 
     # sp初始化完成
     def __on_spinit_finished(self):
@@ -490,6 +523,7 @@ class Win_Local(QWidget):
             self.image_label1.setPixmap(pixmap.scaled(self.image_label1.size(), Qt.AspectRatioMode.KeepAspectRatio))
             # 将QImage转为numpy数组
             img = self.__qimage2np(image)
+            img = self.rgba_to_rgb(img)
             # print(img.shape)
             # 使用模型搜索图片
             self.search_sp(img)
@@ -584,3 +618,43 @@ class Win_Local(QWidget):
         # arr = np.array(ptr).reshape((height, width, 3))
 
         return arr
+
+    @staticmethod
+    def rgba_to_rgb(img, background=(255, 255, 255)):
+
+        """
+        将RGBA四通道图像转换为RGB三通道图像
+
+        参数:
+            img: numpy数组，形状为[H, W, 4]的RGBA图像
+            background: 背景色元组(R, G, B)，默认为白色(255,255,255)
+
+        返回:
+            RGB三通道的numpy数组，形状为[H, W, 3]
+        """
+        # 检查输入有效性
+        if img.ndim != 3 or img.shape[2] != 4:
+            raise ValueError("输入图像必须是四通道RGBA格式 (H, W, 4)")
+
+        # 如果已经是RGB则直接返回
+        if img.shape[2] == 3:
+            return img.copy()
+
+        # 分离通道
+        r, g, b, a = [img[:, :, i] for i in range(4)]
+
+        # 归一化Alpha通道 (0-1范围)
+        alpha = a.astype(float) / 255.0
+
+        # 扩展背景色到图像尺寸
+        bg_r = np.full_like(r, background[0])
+        bg_g = np.full_like(g, background[1])
+        bg_b = np.full_like(b, background[2])
+
+        # 混合计算
+        rgb = np.empty(img.shape[:2] + (3,), dtype=np.uint8)
+        rgb[:, :, 0] = (r * alpha + bg_r * (1 - alpha)).clip(0, 255).astype(np.uint8)
+        rgb[:, :, 1] = (g * alpha + bg_g * (1 - alpha)).clip(0, 255).astype(np.uint8)
+        rgb[:, :, 2] = (b * alpha + bg_b * (1 - alpha)).clip(0, 255).astype(np.uint8)
+
+        return rgb

@@ -1,6 +1,6 @@
 class Text:
     def __init__(self):
-        self.WindowTitle = "PSP_V0.0"
+        self.WindowTitle = "PSP_V1.2"
 
 
 class Background_css:
@@ -10,6 +10,7 @@ class Background_css:
         self.TianYi_BLUE = "background-color: rgba(102, 204, 255, 0.2);"  # 天依蓝
         self.XM_BLUE = "background-color: rgba(178,216,232, 0.3);"  # 小满蓝
         self.LIGHT_GRAY = "background-color: rgba(222,223,224, 0.3);"  # 浅灰色
+
 
 class Button_css:
     def __init__(self):
@@ -68,6 +69,7 @@ class Button_css:
         }
         """
 
+
 class Input_css:
     def __init__(self):
         # 输入框样式，圆角，蓝色边框，悬停时颜色变成红色
@@ -104,6 +106,7 @@ class Input_css:
         }
         """
 
+
 class Text_css:
     def __init__(self):
         # 文本样式，字体大小16px，黑色，粗体
@@ -116,6 +119,7 @@ class Text_css:
         self.TEXT_BLACK_14 = "font-size: 14px; color: black;"
         # 文本样式，字体大小12px，灰色
         self.TEXT_GRAY_12 = "font-size: 12px; color: gray;"
+
 
 class List_css:
     def __init__(self):
