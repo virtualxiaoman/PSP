@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from Tools.local_matcher import LocalMatcher
 from Tools.read_pic import imgs2df, read_image
 from Tools.pic_util import HashPic
+from Tools.test_local_2 import DFGalleryManager
 
 
 class SP:
@@ -79,7 +80,7 @@ class SP:
                         break
         return found_paths
 
-    # 搜索近似图片(不支持局部搜索)，先查验phash，找出phash小于threshold(0.1)的
+    # 搜索近似图片(不支持局部搜索)，先查验phash，找出phash小于hash_threshold的
     def search_similar(self, input_img, hash_threshold=0.2, mean_threshold=70):
         """
         搜差不多的原图(允许小规模水印)
@@ -113,57 +114,67 @@ class SP:
         found_paths = [path for sim, path in found_paths_with_sim]
         return found_paths
 
+    # 搜索局部图片
+    def search_local(self, input_img, top_k=5):
+        manager = DFGalleryManager(
+            model_path="../assets/checkpoint_epoch_14.pth",
+            df=self.df
+        )
+        top_matches = manager.match_image_efficient(input_img, top_k=top_k)  # 含有path和probability
+        found_paths = [match['path'] for match in top_matches]
+        return found_paths
 
-def demo(original_path, crop_size=224):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = LocalMatcher().to(device)  # 需要定义LocalMatcher类
-    model.load_state_dict(torch.load("../assets/checkpoint_epoch_14.pth", map_location=device))
-    model.eval()
 
-    original_img = Image.open(original_path).convert("RGB")
-
-    transform = transforms.Compose([
-        transforms.Resize((400, 400)),  # 先调整到稍大尺寸
-        transforms.RandomCrop(crop_size),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
-
-    crop_img = transform(original_img).unsqueeze(0).to(device)  # 添加批次维度
-
-    original_transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
-    original_input = original_transform(original_img).unsqueeze(0).to(device)
-
-    import time
-    start_time = time.time()
-    with torch.no_grad():
-        # print(f"original_input shape: {original_input.shape}, crop_img shape: {crop_img.shape}")
-        output = model(original_input, crop_img)
-        probability = torch.sigmoid(output).item()
-    end_time = time.time()
-    print(f"[demo] 推理时间: {end_time - start_time:.4f}秒")
-
-    fig, ax = plt.subplots(1, 2, figsize=(12, 6))
-
-    ax[0].imshow(original_img)
-    ax[0].set_title(f"Original Image\n{original_path}")
-    ax[0].axis('off')
-
-    crop_display = crop_img.squeeze(0).cpu().permute(1, 2, 0).numpy()
-    crop_display = crop_display * np.array([0.229, 0.224, 0.225]) + np.array([0.485, 0.456, 0.406])
-    crop_display = np.clip(crop_display, 0, 1)
-    ax[1].imshow(crop_display)
-    ax[1].set_title(f"Cropped Region\nProbability: {probability:.4f}")
-    ax[1].axis('off')
-
-    result = "Same Image" if probability > 0.5 else "Different Image"
-    plt.suptitle(f"Prediction: {result} (Confidence: {probability:.4f})", fontsize=16)
-
-    plt.tight_layout()
-    plt.show()
-
-    return probability
+# def demo(original_path, crop_size=224):
+#     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#     model = LocalMatcher().to(device)  # 需要定义LocalMatcher类
+#     model.load_state_dict(torch.load("../assets/checkpoint_epoch_14.pth", map_location=device))
+#     model.eval()
+#
+#     original_img = Image.open(original_path).convert("RGB")
+#
+#     transform = transforms.Compose([
+#         transforms.Resize((400, 400)),  # 先调整到稍大尺寸
+#         transforms.RandomCrop(crop_size),
+#         transforms.ToTensor(),
+#         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+#     ])
+#
+#     crop_img = transform(original_img).unsqueeze(0).to(device)  # 添加批次维度
+#
+#     original_transform = transforms.Compose([
+#         transforms.Resize((224, 224)),
+#         transforms.ToTensor(),
+#         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+#     ])
+#     original_input = original_transform(original_img).unsqueeze(0).to(device)
+#
+#     import time
+#     start_time = time.time()
+#     with torch.no_grad():
+#         # print(f"original_input shape: {original_input.shape}, crop_img shape: {crop_img.shape}")
+#         output = model(original_input, crop_img)
+#         probability = torch.sigmoid(output).item()
+#     end_time = time.time()
+#     print(f"[demo] 推理时间: {end_time - start_time:.4f}秒")
+#
+#     fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+#
+#     ax[0].imshow(original_img)
+#     ax[0].set_title(f"Original Image\n{original_path}")
+#     ax[0].axis('off')
+#
+#     crop_display = crop_img.squeeze(0).cpu().permute(1, 2, 0).numpy()
+#     crop_display = crop_display * np.array([0.229, 0.224, 0.225]) + np.array([0.485, 0.456, 0.406])
+#     crop_display = np.clip(crop_display, 0, 1)
+#     ax[1].imshow(crop_display)
+#     ax[1].set_title(f"Cropped Region\nProbability: {probability:.4f}")
+#     ax[1].axis('off')
+#
+#     result = "Same Image" if probability > 0.5 else "Different Image"
+#     plt.suptitle(f"Prediction: {result} (Confidence: {probability:.4f})", fontsize=16)
+#
+#     plt.tight_layout()
+#     plt.show()
+#
+#     return probability

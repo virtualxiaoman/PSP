@@ -1,9 +1,14 @@
 import time
+import pandas as pd
 
 from Tools.read_pic import read_image, read_images, imgs2df
 from Tools.pic_util import HashPic
 from Tools.search_pic import SP
 from Tools.test_local_2 import demo_gal
+
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+# pd.set_option('display.max_colwidth', None)
 
 path_origin = '../search/110182236_p0.jpg'
 path_similar = '../search/110182236_p0_clip.png'
@@ -22,10 +27,10 @@ end_time = time.time()
 elapsed_time = end_time - start_time
 print("总时间： {:.2f} 秒".format(elapsed_time))
 
-# print(sp.df.head)
+print(sp.df.head(5))
 # 查看其中的dino这一列
 # print(sp.df['dino'].head())
 # 查看dino第一个元素的shape
 # print(sp.df['dino'].iloc[0].shape)
 
-demo_gal(df=sp.df)
+# demo_gal(df=sp.df)

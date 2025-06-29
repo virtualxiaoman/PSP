@@ -6,9 +6,10 @@ from Tools.search_pic import SP
 
 path_origin = '../search/阿洛娜_原图.jpg'
 path_similar = '../search/阿洛娜_水印_重复.jpg'
-path_similar = '../input/白子/Shiroko.jpeg'
+path_local = '../search/110182236_p0_clip.png'
 img_origin = read_image(path_origin, gray_pic=False, show_details=False)
 img_similar = read_image(path_similar, gray_pic=False, show_details=False)
+img_local = read_image(path_local, gray_pic=False, show_details=False)
 
 start_time = time.time()
 sp = SP()
@@ -19,14 +20,26 @@ ans = sp.search_similar(img_similar)
 print(ans)  # ['E:/Py-Project/PSP/input/白子/Shiroko.jpeg']
 end_time = time.time()
 elapsed_time = end_time - start_time
-print("总时间： {:.2f} 秒".format(elapsed_time))
+print("[ML] 总时间： {:.2f} 秒".format(elapsed_time))  # 0.09 秒
 
-print(sp.df.head)
+# print(sp.df.head)
 # 查看其中的dino这一列
 # print(sp.df['dino'].head())
 # 查看dino第一个元素的shape
-print(sp.df['dino'].iloc[0].shape)
+# print(sp.df['dino'].iloc[0].shape)
 
-from Tools.test_local_2 import demo_gal
+start_time = time.time()
+sp = SP()
+sp.init_pic_df(path_local='F:/Picture/pixiv')
+ans = sp.search_local(img_local)
+print(ans)
+end_time = time.time()
+elapsed_time = end_time - start_time
+print("[DL] 总时间： {:.2f} 秒".format(elapsed_time))  # 9.18 秒(需要把模型加载到GPU上)
 
-demo_gal(df=sp.df)
+start_time = time.time()
+ans = sp.search_local(img_local)
+# print(ans)
+end_time = time.time()
+elapsed_time = end_time - start_time
+print("[DL] 总时间： {:.2f} 秒".format(elapsed_time))  # 3.39 秒

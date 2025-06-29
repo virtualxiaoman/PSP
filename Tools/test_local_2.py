@@ -7,6 +7,7 @@ import time
 import pandas as pd
 
 from Tools.local_matcher import LocalMatcher
+from Tools.read_pic import read_image
 
 
 class DFGalleryManager:
@@ -28,8 +29,8 @@ class DFGalleryManager:
 
         # 图像预处理
         self.transform = transforms.Compose([
-            transforms.Resize((224, 224)),
             transforms.ToTensor(),
+            transforms.Resize((224, 224)),
             transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225]),
         ])
@@ -121,12 +122,12 @@ class DFGalleryManager:
 
         return results
 
-    def match_image_efficient(self, img2_path, top_k=5):
+    def match_image_efficient(self, img2, top_k=5):
         """
         更高效的匹配实现（如果GPU内存足够）
         """
         # 处理用户图片
-        img2 = Image.open(img2_path).convert("RGB")
+        # img2 = Image.open(img2_path).convert("RGB")
         img2_tensor = self.transform(img2).unsqueeze(0).to(self.device)
 
         with torch.no_grad():
@@ -142,7 +143,7 @@ class DFGalleryManager:
             key2 = feat2_batch.unsqueeze(1)
             value2 = feat2_batch.unsqueeze(1)
             # print(query1.shape, key2.shape, value2.shape)
-            # torch.Size([4, 1, 1, 768]) torch.Size([4, 1, 768]) torch.Size([4, 1, 768])
+            # torch.Size([4, 1, 768]) torch.Size([4, 1, 768]) torch.Size([4, 1, 768])
             attn1, _ = self.model.cross_attn(query1, key2, value2)
             attn1 = attn1.squeeze(1)  # [N, feat_dim]
 
@@ -185,6 +186,7 @@ def demo_gal(df):
 
     # 匹配用户图片
     user_image_path = "../search/110182236_p0_clip.png"
+    input_img = read_image(user_image_path)
 
     # 方法1: 分批处理（适合大型图库）
     # top_matches = manager.match_image(user_image_path, top_k=5, batch_size=100)
