@@ -75,6 +75,7 @@ class Win_Local(QWidget):
         self.local_path = None  # 本地图库路径
         self.model_name = None  # 本地图库模型的名字
         self.model_path = None  # 本地图库模型的路径(完整路径)
+        self.input_img = None  # 待搜索的图片(从剪贴板或上传的图片)
         # 默认设置为"ori"原图搜索。"sim"为相似图搜索。暂不支持"wat"水印搜索、"par"(partial)局部搜索
         self.search_choice = "ori"
         self.result_list = []  # 搜索结果列表
@@ -276,13 +277,22 @@ class Win_Local(QWidget):
     # 搜索提示&按钮
     def init_HLayout_searchtip(self):
         H_Layout_searchtip = QHBoxLayout()
-        self.Label_search_tip = QLabel("本地图库处理完毕后，在下方图片区域粘贴图片或者点击右侧按钮，即可开始搜索")
+
+        btn_upload = QPushButton("图片上传")
+        btn_upload.setStyleSheet(Button_css.BTN_BLUE_PURPLE)
+        btn_upload.clicked.connect(self._upload_image)  # 连接上传事件
+
+        self.Label_search_tip = QLabel("通过剪贴板粘贴图片 或 上传图片，点击右侧按钮即可开始搜索")
+
         btn_search = QPushButton("开始搜索")
         btn_search.setStyleSheet(Button_css.BTN_BLUE_PURPLE)
-        btn_search.clicked.connect(self.__paste_image)  # 点击按钮，获取剪贴板图片，然后搜索
+        btn_search.clicked.connect(self.search_pic)  # 点击按钮，获取剪贴板图片，然后搜索
+
+        H_Layout_searchtip.addWidget(btn_upload)
+        H_Layout_searchtip.addStretch(1)
         H_Layout_searchtip.addWidget(self.Label_search_tip)
         H_Layout_searchtip.addWidget(btn_search)
-        H_Layout_searchtip.addStretch(1)
+        H_Layout_searchtip.addStretch(20)
         return H_Layout_searchtip
 
     # 输入&返回(图片input，图片return、搜索结果list)
@@ -362,6 +372,43 @@ class Win_Local(QWidget):
                                self.ori_num, self.sim_threshold, self.par_topk)
         self.thread.result_list.connect(self.__update_result_list)
         self.thread.start()
+
+    def search_pic(self):
+        if self.input_img is None:
+            self.Label_search_tip.setText("请先上传图片或从剪贴板粘贴图片")
+            return
+        else:
+            self.search_sp(self.input_img)
+
+    # 图片上传功能
+    def _upload_image(self):
+        file_name, _ = QFileDialog.getOpenFileName(
+            self,
+            "选择图片",
+            "",
+            "图片文件 (*.png *.jpg *.jpeg *.bmp)"
+        )
+        if file_name:
+            # 使用QPixmap显示图片
+            pixmap = QPixmap(file_name)
+            if not pixmap.isNull():
+                self.image_label1.setPixmap(
+                    pixmap.scaled(self.image_label1.size(),
+                                  Qt.AspectRatioMode.KeepAspectRatio)
+                )
+                # 使用OpenCV读取图片并存储
+                img = cv2.imread(file_name)
+                if img is not None:
+                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                    self.input_img = img
+                    self.Label_search_tip.setText("图片已上传，点击开始搜索按钮进行搜索")
+                else:
+                    self.Label_search_tip.setText("图片读取失败")
+            else:
+                self.Label_search_tip.setText("图片文件无法打开")
+        else:
+            # 用户取消选择，不做处理
+            pass
 
     # 选择本地图库文件夹
     def __on_choice_local_folder(self):
@@ -492,6 +539,7 @@ class Win_Local(QWidget):
                 self.sim_threshold = 0.2
                 print(f"Similarity threshold set to {self.sim_threshold}")
                 self.Label_sim_param.setText(f"容忍度设置错误，只能在0~1之间(当前为{self.sim_threshold})")
+                self.Label_sim_param.setText(f"容忍度设置错误，只能在0~1之间(当前为{self.sim_threshold})")
             else:
                 print(f"Similarity threshold set to {self.sim_threshold}")
                 self.Label_sim_param.setText(f"容忍度(当前为{self.sim_threshold})")
@@ -533,7 +581,8 @@ class Win_Local(QWidget):
             img = self.rgba_to_rgb(img)
             # print(img.shape)
             # 使用模型搜索图片
-            self.search_sp(img)
+            # self.search_sp(img)
+            self.input_img = img  # 保存剪贴板图片
         else:
             self.image_label1.clear()
             self.image_label1.setText("剪贴板里不是图片")

@@ -35,11 +35,16 @@ ans = sp.search_partial(img_local, top_k=3)
 print(ans)
 end_time = time.time()
 elapsed_time = end_time - start_time
-print("[DL] 总时间： {:.2f} 秒".format(elapsed_time))  # 9.18 秒(需要把模型加载到GPU上)
+print("[DL] 总时间： {:.2f} 秒".format(elapsed_time))  # 6.43 秒(需要把模型加载到GPU上)
 
 start_time = time.time()
 ans = sp.search_partial(img_local)
 # print(ans)
 end_time = time.time()
 elapsed_time = end_time - start_time
-print("[DL] 总时间： {:.2f} 秒".format(elapsed_time))  # 3.39 秒
+print("[DL] 总时间： {:.2f} 秒".format(elapsed_time))  # 3.14 秒
+
+# [search_origin] input_size: 12572253, input_shape: (1731, 2421, 3)
+# 查看df中路径为：F:/Picture/pixiv/BA/110182236_p0.jpg的size和shape
+print(sp.df[sp.df['path'] == 'F:/Picture/pixiv/BA/110182236_p0.jpg'][['size', 'shape', 'mean']])
+# 12572253  (1731, 2421, 3)  198.689028

@@ -64,11 +64,13 @@ class SP:
         input_shape = input_img.shape
         hp = HashPic()
         input_hash = hp.get_hash(input_img, "phash")  # np.array
+        print(f"[search_origin] input_size: {input_size}, input_shape: {input_shape} input_mean: {np.mean(input_img)}")
 
         found_paths = []
         for index, row in self.df.iterrows():
             # 先比较size与shape
             if row['size'] == input_size and row['shape'] == input_shape and np.array_equal(row['hash'], input_hash):
+                print(f"\r[search_origin] 匹配到 {row['path']}", end=' ')
                 local_img_path = row['path']
                 # self.id_origin.append(row["id"])
                 local_img = read_image(local_img_path, gray_pic=False, show_details=False)

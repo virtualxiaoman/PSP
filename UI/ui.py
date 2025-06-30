@@ -4,9 +4,10 @@ from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QHBoxLayout, QVB
 from UI.win_local import Win_Local
 from UI.win_net import Win_Net
 from UI.win_tip import Win_Tip
-
+from UI.win_llm import Win_LLM
 from UI.config import Text as Text_config
 from UI.config import Background_css, Button_css
+
 Text_config = Text_config()
 Background_css = Background_css()
 Button_css = Button_css()
@@ -27,10 +28,12 @@ class PSP_UI(QMainWindow):
         win1 = Win_Local()
         win2 = Win_Net()
         win3 = Win_Tip()
+        win4 = Win_LLM()
         # 将创建的2个Widget添加到抽屉布局器中
         self.Layout_stack.addWidget(win1)
         self.Layout_stack.addWidget(win2)
         self.Layout_stack.addWidget(win3)
+        self.Layout_stack.addWidget(win4)
 
     def init_ui(self):
         # 设置窗口的基础属性
@@ -73,16 +76,20 @@ class PSP_UI(QMainWindow):
         btn_press1 = QPushButton("本地搜图")
         btn_press2 = QPushButton("网络搜图")
         btn_press3 = QPushButton("使用帮助")
+        btn_press4 = QPushButton("图像出处识别")
         btn_press1.setStyleSheet(Button_css.BTN_ARONA)
         btn_press2.setStyleSheet(Button_css.BTN_ARONA)
         btn_press3.setStyleSheet(Button_css.BTN_ARONA)
+        btn_press4.setStyleSheet(Button_css.BTN_ARONA)
         # 添加点击事件
         btn_press1.clicked.connect(self.__switch_to_local)
         btn_press2.clicked.connect(self.__switch_to_net)
         btn_press3.clicked.connect(self.__switch_to_tip)
+        btn_press4.clicked.connect(self.__switch_to_llm)
         VLayout_btn.addWidget(btn_press1)
         # VLayout_btn.addWidget(btn_press2)
         VLayout_btn.addWidget(btn_press3)
+        VLayout_btn.addWidget(btn_press4)
         VLayout_btn.addStretch(1)
         btn_widget.setLayout(VLayout_btn)
         return btn_widget
@@ -95,6 +102,9 @@ class PSP_UI(QMainWindow):
 
     def __switch_to_tip(self):
         self.Layout_stack.setCurrentIndex(2)
+
+    def __switch_to_llm(self):
+        self.Layout_stack.setCurrentIndex(3)
 
 
 if __name__ == '__main__':
