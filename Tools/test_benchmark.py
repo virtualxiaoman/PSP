@@ -31,7 +31,7 @@ def blur_images(imgs_dict, kernel_size=(5, 5)):
     return blurred_dict
 
 
-def crop_images(imgs_dict, crop_ratio=0.8):
+def crop_images(imgs_dict, crop_ratio=0.6):
     """
     对图像字典中的所有图像进行随机位置裁剪
 
@@ -61,12 +61,12 @@ def crop_images(imgs_dict, crop_ratio=0.8):
     return cropped_dict
 
 
-def test_search_origin(path_local):
+def test_search_origin(path_local, max_num=-1):
     correct = 0
     total = 0
     sp = SP()
     sp.init_pic_df(path_local=path_local)
-    imgs_dict = read_images(path_local)
+    imgs_dict = read_images(path_local, max_num=max_num)
 
     start_time = time.time()
     for img_path, img in imgs_dict.items():
@@ -78,7 +78,7 @@ def test_search_origin(path_local):
         else:
             pass  # 没有找到匹配的图片
         total += 1  # 说明没有找到匹配的图片
-        print(f"Processed: {total}/{len(imgs_dict)}", end='\r')  # 进度显示
+        print(f"\rProcessed: {total}/{len(imgs_dict)}", end='')  # 进度显示
 
     recall_rate = (correct / total) * 100 if total > 0 else 0
     print(f"\n[ML-原图搜索 top-1] Recall rate: {correct}/{total} = {recall_rate:.2f}%")
@@ -86,12 +86,12 @@ def test_search_origin(path_local):
     print(f"[ML-原图搜索] Total time: {end_time - start_time:.2f} s")  # 显示总时间
 
 
-def test_search_similar(path_local, top_k=5):
+def test_search_similar(path_local, top_k=5, max_num=-1):
     correct = 0
     total = 0
     sp = SP()
     sp.init_pic_df(path_local=path_local)
-    imgs_dict = read_images(path_local)
+    imgs_dict = read_images(path_local, max_num=max_num)
     imgs_dict = blur_images(imgs_dict, kernel_size=(5, 5))  # 对图像进行模糊处理
 
     start_time = time.time()
@@ -106,7 +106,7 @@ def test_search_similar(path_local, top_k=5):
         else:
             pass  # 没有找到匹配的图片
         total += 1
-        print(f"Processed: {total}/{len(imgs_dict)} (Top-{top_k})", end='\r')  # 显示top_k信息
+        print(f"\rProcessed: {total}/{len(imgs_dict)} (Top-{top_k})", end='')  # 显示top_k信息
 
     recall_rate = (correct / total) * 100 if total > 0 else 0
     print(f"\n[ML-近似搜索 Top-{top_k}] Recall rate: {correct}/{total} = {recall_rate:.2f}%")
@@ -114,12 +114,13 @@ def test_search_similar(path_local, top_k=5):
     print(f"[ML-近似搜索] Total time: {end_time - start_time:.2f} s")  # 显示总时间
 
 
-def test_search_partial(path_local, top_k=5, crop_ratio=0.8):
+def test_search_partial(path_local, top_k=5, crop_ratio=0.7, max_num=-1):
     correct = 0
     total = 0
     sp = SP()
     sp.init_pic_df(path_local=path_local)
-    imgs_dict = read_images(path_local)
+    imgs_dict = read_images(path_local, max_num=max_num)
+    imgs_dict = blur_images(imgs_dict, kernel_size=(5, 5))  # 对图像进行模糊处理
     imgs_dict = crop_images(imgs_dict, crop_ratio=crop_ratio)  # 对图像进行随机裁剪
 
     start_time = time.time()
@@ -134,7 +135,7 @@ def test_search_partial(path_local, top_k=5, crop_ratio=0.8):
         else:
             pass  # 没有找到匹配的图片
         total += 1
-        print(f"Processed: {total}/{len(imgs_dict)} (Top-{top_k})", end='\r')  # 显示top_k信息
+        print(f"\rProcessed: {total}/{len(imgs_dict)} (Top-{top_k})", end='')  # 显示top_k信息
 
     recall_rate = (correct / total) * 100 if total > 0 else 0
     print(f"\n[DL-局部搜索 Top-{top_k}] Partial Recall rate: {correct}/{total} = {recall_rate:.2f}%")
@@ -142,9 +143,43 @@ def test_search_partial(path_local, top_k=5, crop_ratio=0.8):
     print(f"[DL-局部搜索] Total time: {end_time - start_time:.2f} s")  # 显示总时间
 
 
-test_search_origin(path_local='F:/Picture/甘城なつき')
-test_search_similar(path_local='F:/Picture/甘城なつき', top_k=1)
-test_search_similar(path_local='F:/Picture/甘城なつき', top_k=3)
-# test_search_similar(path_local='F:/Picture/甘城なつき', top_k=10)
-test_search_partial(path_local='F:/Picture/甘城なつき', top_k=5)
-test_search_partial(path_local='F:/Picture/甘城なつき', top_k=10)
+def test1():
+    test_search_origin(path_local='F:/Picture/甘城')
+    test_search_similar(path_local='F:/Picture/甘城', top_k=1)
+    test_search_similar(path_local='F:/Picture/甘城', top_k=3)
+    test_search_partial(path_local='F:/Picture/甘城', top_k=3)
+    test_search_partial(path_local='F:/Picture/甘城', top_k=5)
+    test_search_partial(path_local='F:/Picture/甘城', top_k=10)
+
+
+def test2():
+    test_search_origin(path_local='F:/Picture/呆毛图库', max_num=500)
+    test_search_similar(path_local='F:/Picture/呆毛图库', top_k=1, max_num=500)
+    test_search_similar(path_local='F:/Picture/呆毛图库', top_k=3, max_num=500)
+    test_search_partial(path_local='F:/Picture/呆毛图库', top_k=3, max_num=500)
+    test_search_partial(path_local='F:/Picture/呆毛图库', top_k=5, max_num=500)
+    test_search_partial(path_local='F:/Picture/呆毛图库', top_k=10, max_num=500)
+
+
+def test3():
+    test_search_partial(path_local='F:/Picture/呆毛图库', top_k=3, max_num=500)
+
+
+def test4():
+    test_search_partial(path_local='F:/Picture/pixiv/BA', top_k=3)
+
+
+def test5():
+    # test_search_origin(path_local='E:/Py-Project/PSP/test_pictures')
+    # test_search_similar(path_local='E:/Py-Project/PSP/test_pictures', top_k=1)
+    # test_search_similar(path_local='E:/Py-Project/PSP/test_pictures', top_k=3)
+    test_search_partial(path_local='E:/Py-Project/PSP/test_pictures', top_k=3, crop_ratio=0.8)
+    test_search_partial(path_local='E:/Py-Project/PSP/test_pictures', top_k=5, crop_ratio=0.8)
+    test_search_partial(path_local='E:/Py-Project/PSP/test_pictures', top_k=10, crop_ratio=0.8)
+
+
+test1()
+# test2()
+# test3()
+# test4()
+# test5()

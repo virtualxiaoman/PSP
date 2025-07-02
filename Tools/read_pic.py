@@ -54,7 +54,7 @@ def read_image(img_path, gray_pic=False, show_details=False):
 
 
 # 读取文件夹下的所有图片
-def read_images(path, gray_pic=False, show_details=False):
+def read_images(path, gray_pic=False, show_details=False, max_num=-1):
     """
     读取文件夹下的所有图片
     [使用示例]：
@@ -63,7 +63,8 @@ def read_images(path, gray_pic=False, show_details=False):
         print(len(imgs))
     :param path: 文件夹路径
     :param gray_pic: 是否读取灰度图像
-    :param show_details: 是否输出图片的shape以及显示图片
+    :param show_details: 是否输出图片的shape以及显示图片，不建议设置为True
+    :param max_num: 最大读取图片数量，-1表示不限制
     :return: imgs_dict: 图像数组字典，key是图片的绝对路径，value是图片数组
     """
     # 检查path是否存在
@@ -72,7 +73,9 @@ def read_images(path, gray_pic=False, show_details=False):
         return -1
 
     # imgs = []
+    count = 0  # 计数器，统计读取的图片数量
     imgs_dict = {}  # 存放读取到的所有图片，key是图片的绝对路径，value是图片数组
+    img_path = None  # 图片路径(初始化为None，避免未定义错误)
 
     # os.walk()返回一个三元组，分别是：当前路径，当前路径下的文件夹，当前路径下的文件
     for root, dirs, files in os.walk(path):
@@ -80,14 +83,20 @@ def read_images(path, gray_pic=False, show_details=False):
         # print("子目录:", dirs)
         # print("文件:", files)
         for file in files:
-            if file.endswith('.jpg') or file.endswith('.png') or file.endswith('.jpeg'):
-                # print("相对路径", os.path.join(root, file))
-                # print("绝对路径", os.path.abspath(os.path.join(root, file)))
+            try:
+                if file.lower().endswith(('.jpg', '.png', '.jpeg')):
+                    # print("相对路径", os.path.join(root, file))
+                    # print("绝对路径", os.path.abspath(os.path.join(root, file)))
 
-                img_path = os.path.join(root, file)
-                img = read_image(img_path, gray_pic=gray_pic, show_details=show_details)
-                img_abs_path = os.path.abspath(img_path).replace('\\', '/')
-                imgs_dict[img_abs_path] = img
+                    img_path = os.path.join(root, file)
+                    img = read_image(img_path, gray_pic=gray_pic, show_details=show_details)
+                    img_abs_path = os.path.abspath(img_path).replace('\\', '/')
+                    imgs_dict[img_abs_path] = img
+                    count += 1
+                    if 0 < max_num <= count:
+                        return imgs_dict  # 达到最大读取数量，提前返回
+            except Exception as e:
+                print(f"读取图片失败: {img_path} : {str(e)}")
 
     return imgs_dict
 

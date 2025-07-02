@@ -1,17 +1,7 @@
 import numpy as np
 import os
 import pandas as pd
-# import torch
-# import torch.nn as nn
-# import torch.optim as optim
-# from torch.utils.data import Dataset, DataLoader
-# from torchvision import transforms, models, datasets
-# from torchvision.transforms import functional as F
-# from torchvision import transforms
-# from PIL import Image
-# import matplotlib.pyplot as plt
-#
-# from Tools.local_matcher import LocalMatcher
+
 from Tools.read_pic import imgs2df, read_image
 from Tools.pic_util import HashPic
 from Tools.local_manager import DFGalleryManager
@@ -23,6 +13,7 @@ class SP:
         # self.id_origin = []  # 匹配到的原图的id
         # self.id_similar = []  # 匹配到的近似图片的id
         self.id_result = []  # 匹配到的图片(原图/近似)的id
+        self.manager = None  # DFGalleryManager实例，用于局部图片搜索
 
     # 初始化图片数据，必做
     def init_pic_df(self, path_local=None, save_name=None, save_path=None, log_callback=None):
@@ -94,13 +85,13 @@ class SP:
         # self.id_similar = []  # 清空
         hp = HashPic()
         input_hash = hp.get_hash(input_img, "phash")
+        input_mean = np.mean(input_img)
 
         found_paths_with_sim = []
         # print(self.df)
         for index, row in self.df.iterrows():
             sim = hp.cal_hash_distance(input_hash, row["hash"])
             if sim < hash_threshold:
-                input_mean = np.mean(input_img)
                 local_mean = row["mean"]
                 # print("\r[search_similar] input_mean:", input_mean, "local_mean:", local_mean, end=' ')
                 # print(input_mean - local_mean)
@@ -118,13 +109,14 @@ class SP:
         return found_paths
 
     # 搜索局部图片
-    def search_partial(self, input_img, top_k=5):
-        manager = DFGalleryManager(
-            model_path="../assets/checkpoint_epoch_14.pth",
-            df=self.df
-        )
+    def search_partial(self, input_img, top_k=5, dinov2_path="../assets/checkpoint_epoch_14.pth"):
+        if self.manager is None:
+            self.manager = DFGalleryManager(
+                model_path=dinov2_path,
+                df=self.df
+            )
         # print(f"[search_partial] 进行局部图片搜索")
-        top_matches = manager.match_image_efficient(input_img, top_k=top_k)  # 含有path和probability
+        top_matches = self.manager.match_image_efficient(input_img, top_k=top_k)  # 含有path和probability
         found_paths = [match['path'] for match in top_matches]
         return found_paths
 

@@ -1,6 +1,6 @@
 class Text:
     def __init__(self):
-        self.WindowTitle = "PSP_V1.2"
+        self.WindowTitle = "PSP V1.2"
 
 
 class Background_css:

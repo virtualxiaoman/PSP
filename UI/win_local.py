@@ -8,6 +8,7 @@ from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtCore import Qt
 
 from Tools.search_pic import SP
+from Tools.read_pic import read_image
 from UI.config import Button_css, Text_css, Input_css, Background_css, List_css
 
 Button_css = Button_css()
@@ -397,9 +398,8 @@ class Win_Local(QWidget):
                                   Qt.AspectRatioMode.KeepAspectRatio)
                 )
                 # 使用OpenCV读取图片并存储
-                img = cv2.imread(file_name)
+                img = read_image(file_name, gray_pic=False, show_details=False)
                 if img is not None:
-                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                     self.input_img = img
                     self.Label_search_tip.setText("图片已上传，点击开始搜索按钮进行搜索")
                 else:
