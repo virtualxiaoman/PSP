@@ -61,10 +61,7 @@ class DINOv2Encoder:
         final_features = np.concatenate(all_features, axis=0)
 
         # 4. 根据输入类型返回对应维度
-        if not is_list:
-            return final_features[0]  # 返回 (D,)
-
-        return final_features  # 返回 (N, D)
+        return final_features if is_list else final_features[0]  # 返回 (N, D) 或者 (D,)
 
 
 if __name__ == "__main__":
