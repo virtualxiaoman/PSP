@@ -20,8 +20,8 @@
 # import matplotlib.pyplot as plt
 #
 # # 读取图像
-# query_image_path = '../search/阿洛娜_网图.jpg'
-# gallery_image_path = '../search/阿洛娜_原图.jpg'
+# query_image_path = '../search_imgs/阿洛娜_网图.jpg'
+# gallery_image_path = '../search_imgs/阿洛娜_原图.jpg'
 #
 # query_img = cv2.imdecode(np.fromfile(query_image_path, dtype=np.uint8), -1)
 # query_img = cv2.cvtColor(query_img, cv2.COLOR_BGR2RGB)

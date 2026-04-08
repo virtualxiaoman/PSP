@@ -28,12 +28,12 @@ conda install numpy scipy matplotlib pillow opencv imagehash -c conda-forge
 ```python
 import time
 
-from src.utils.read_pic import read_image, read_images, imgs2df
-from src.utils.pic_util import HashPic
+from src.utils.img_read import read_image, read_images, imgs2df
+from src.utils.img_hash import HashPic
 from src.search_pic import SP
 
-path_origin = '../search/阿洛娜_原图.jpg'
-path_similar = '../search/阿洛娜_水印_重复.jpg'
+path_origin = '../search_imgs/阿洛娜_原图.jpg'
+path_similar = '../search_imgs/阿洛娜_水印_重复.jpg'
 img_origin = read_image(path_origin, gray_pic=False, show_details=False)
 img_similar = read_image(path_similar, gray_pic=False, show_details=False)
 
@@ -80,9 +80,9 @@ G:\venv\torch_venv\Scripts\python.exe E:\py_proj\picspic\Tools\quick_start.py
 
 -------原图`local`--------------------原图`input`--------------------近似图片`input`-------
 <div>
-    <img src="input/阿洛娜/arona.jpg" width="200">
-    <img src="search/阿洛娜_原图.jpg" width="200">
-    <img src="search/阿洛娜_水印_重复.jpg" width="200">
+    <img src="input/local_imgs/阿洛娜/arona.jpg" width="200">
+    <img src="input/search_imgs/阿洛娜_原图.jpg" width="200">
+    <img src="input/search_imgs/阿洛娜_水印_重复.jpg" width="200">
 </div>
 ----------------------------------------查原图：0.09秒----------------查近似：0.03秒
 

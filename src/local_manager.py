@@ -4,7 +4,7 @@ from torchvision import transforms
 from PIL import Image
 
 from src.local_matcher import LocalMatcher
-from src.utils.read_pic import read_image
+from src.utils.img_read import read_image
 
 
 class DFGalleryManager:
@@ -181,7 +181,7 @@ def demo_gal(df):
     )
 
     # 匹配用户图片
-    user_image_path = "../search/110182236_p0_clip.png"
+    user_image_path = "../input/search_imgs/110182236_p0_clip.png"
     input_img = read_image(user_image_path)
 
     # 方法1: 分批处理（适合大型图库）

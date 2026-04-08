@@ -1,5 +1,5 @@
 from src.search_pic import SP
-from src.utils.read_pic import read_images
+from src.utils.img_read import read_images
 import time
 import cv2
 import random

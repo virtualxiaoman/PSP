@@ -7,7 +7,7 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 
 from src.search_pic import SP
-from src.utils.read_pic import read_image
+from src.utils.img_read import read_image
 from UI.config import Button_css, Text_css, Input_css, Background_css, List_css
 
 Button_css = Button_css()

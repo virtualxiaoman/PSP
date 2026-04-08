@@ -2,8 +2,8 @@ import numpy as np
 import os
 import pandas as pd
 
-from src.utils.read_pic import imgs2df, read_image
-from src.utils.pic_util import HashPic
+from src.utils.img_read import imgs2df, read_image
+from src.utils.img_hash import HashPic
 from src.local_manager import DFGalleryManager
 
 

@@ -1,11 +1,11 @@
 import time
 
-from src.utils.read_pic import read_image
+from src.utils.img_read import read_image
 from src.search_pic import SP
 
-path_origin = '../search/阿洛娜_原图.jpg'
-path_similar = '../search/阿洛娜_水印_重复.jpg'
-path_local = '../search/110182236_p0_clip.png'
+path_origin = '../input/search_imgs/阿洛娜_原图.jpg'
+path_similar = '../input/search_imgs/阿洛娜_水印_重复.jpg'
+path_local = '../input/search_imgs/白州梓_模糊.jpg'
 img_origin = read_image(path_origin, gray_pic=False, show_details=False)
 img_similar = read_image(path_similar, gray_pic=False, show_details=False)
 img_local = read_image(path_local, gray_pic=False, show_details=False)

@@ -22,9 +22,9 @@
 # #     print(k, v.shape)
 # print('-------------------')
 #
-# target_path = r'search'
-# # target_imgs_dict = {r'search\阿洛娜_网图.jpg': read_image(target_path + r'\阿洛娜_网图.jpg')}
-# target_imgs_dict = {r'search\阿洛娜_水印.png': read_image(target_path + r'\阿洛娜_水印.png')}
+# target_path = r'search_imgs'
+# # target_imgs_dict = {r'search_imgs\阿洛娜_网图.jpg': read_image(target_path + r'\阿洛娜_网图.jpg')}
+# target_imgs_dict = {r'search_imgs\阿洛娜_水印.png': read_image(target_path + r'\阿洛娜_水印.png')}
 # target_path = r"D:\HP\Desktop\111"
 # target_imgs_dict = read_imgs(target_path)
 #

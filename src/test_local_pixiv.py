@@ -1,15 +1,15 @@
 import time
 import pandas as pd
 
-from src.utils.read_pic import read_image
+from src.utils.img_read import read_image
 from src.search_pic import SP
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 # pd.set_option('display.max_colwidth', None)
 
-path_origin = '../search/110182236_p0.jpg'
-path_similar = '../search/110182236_p0_clip.png'
+path_origin = '../input/search_imgs/110182236_p0.jpg'
+path_similar = '../input/search_imgs/110182236_p0_clip.png'
 # path_similar = '../input/白子/Shiroko.jpeg'
 img_origin = read_image(path_origin, gray_pic=False, show_details=False)
 img_similar = read_image(path_similar, gray_pic=False, show_details=False)

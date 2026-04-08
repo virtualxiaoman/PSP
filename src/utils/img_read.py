@@ -10,7 +10,7 @@ import torch
 from torchvision import transforms
 
 from src.local_matcher import LocalMatcher
-from src.utils.pic_util import HashPic
+from src.utils.img_hash import HashPic
 
 
 # # 在import cv2前设置，避免libpng warning: iCCP: known incorrect sRGB profile

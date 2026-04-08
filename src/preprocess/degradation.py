@@ -3,7 +3,7 @@ import math
 import numpy as np
 import random
 
-from src.utils.read_pic import read_image
+from src.utils.img_read import read_image
 
 
 # ==========================================
@@ -167,11 +167,13 @@ class Blur(DegradationComponent):
         return kernel
 
 
+# 分辨率退化
 class ResizeDownsampling(DegradationComponent):
     def apply(self, img):
+        # return img
         h, w = img.shape[:2]
         # 随机缩放比例 (Downsampling)
-        scale = random.uniform(0.5, 0.9)
+        scale = random.uniform(0.6, 0.9)
         new_h, new_w = int(h * scale), int(w * scale)
 
         # 随机选择插值方法: bicubic, bilinear, area
@@ -228,39 +230,169 @@ class JPEGCompression(DegradationComponent):
         return img
 
 
+class GeometricTransform(DegradationComponent):
+    """
+    几何退化组件：
+        - 随机旋转
+        - 随机缩放（可放大/缩小）
+        - 可选平移
+
+    模拟：
+        - 手持拍照角度偏移
+        - 轻微构图变化
+        - 数码变焦
+    """
+
+    def __init__(
+            self,
+            apply_prob=0.8,
+            rotate_range=(-15, 15),  # 旋转角度范围（度）
+            scale_range=(0.8, 1.2),  # 缩放范围
+            translate_ratio=0.05  # 平移比例（相对宽高）
+    ):
+        super().__init__(apply_prob)
+        self.rotate_range = rotate_range
+        self.scale_range = scale_range
+        self.translate_ratio = translate_ratio
+
+    def apply(self, img):
+        # return img
+        h, w = img.shape[:2]
+
+        # ===== 随机参数 =====
+        angle = random.uniform(*self.rotate_range)
+        # scale = random.uniform(*self.scale_range)
+        max_tx = self.translate_ratio * w
+        max_ty = self.translate_ratio * h
+        tx = random.uniform(-max_tx, max_tx)
+        ty = random.uniform(-max_ty, max_ty)
+
+        # ===== 仿射变换矩阵 =====
+        center = (w / 2, h / 2)
+        # M = cv2.getRotationMatrix2D(center, angle, scale)
+        M = cv2.getRotationMatrix2D(center, angle, 1)
+
+        # 加入平移
+        M[0, 2] += tx
+        M[1, 2] += ty
+
+        # ===== 执行变换 =====
+        transformed = cv2.warpAffine(
+            img,
+            M,
+            (w, h),
+            flags=cv2.INTER_LINEAR,
+            borderMode=cv2.BORDER_REFLECT_101  # 避免黑边
+        )
+
+        return transformed
+
+
+# 空间裁剪
+class RandomCrop(DegradationComponent):
+    def apply(self, img):
+        h, w = img.shape[:2]
+        scale = random.uniform(0.7, 1.0)
+
+        new_h, new_w = int(h * scale), int(w * scale)
+        y = random.randint(0, h - new_h)
+        x = random.randint(0, w - new_w)
+
+        crop = img[y:y + new_h, x:x + new_w]
+        return cv2.resize(crop, (w, h))
+
+
 # ==========================================
 # 3. 核心流程管理器 (Pipeline Managers)
 # ==========================================
 class RandomDegradationOrder:
-    """单次（一阶）退化过程：随机选取组件，随机打乱顺序"""
+    """
+    单次（一阶）退化过程：按策略随机选取组件，随机打乱顺序。
+    分组如下：
+    | Stage | 类型    | 组件                                 |
+    | ----- | ----- | ---------------------------------- |
+    | 1     | 几何退化  | `GeometricTransform`, `RandomCrop` |
+    | 2     | 光学退化  | `Blur`                             |
+    | 3     | 分辨率退化 | `ResizeDownsampling`               |
+    | 4     | 噪声退化  | `Noise`                            |
+    | 5     | 颜色退化  | `ColorDistortion`                  |
+    | 6     | 压缩退化  | `JPEGCompression`                  |
+    Geo → Blur → Resize → Noise → Color → JPEG
+    """
 
     def __init__(self, component_pool):
         self.component_pool = component_pool
 
     def __call__(self, img):
-        # 随机决定本次退化包含几个组件 (0 ~ 5 个)
-        num_components = random.randint(0, len(self.component_pool))
+        # ===== 1. 按类型分组 =====
+        geo = []
+        blur = []
+        resize = []
+        noise = []
+        color = []
+        jpeg = []
 
-        if num_components == 0:
-            return img  # 0个组件，直接跳过本次退化
+        for comp in self.component_pool:
+            if isinstance(comp, (GeometricTransform, RandomCrop)):
+                geo.append(comp)
+            elif isinstance(comp, Blur):
+                blur.append(comp)
+            elif isinstance(comp, ResizeDownsampling):
+                resize.append(comp)
+            elif isinstance(comp, Noise):
+                noise.append(comp)
+            elif isinstance(comp, ColorDistortion):
+                color.append(comp)
+            elif isinstance(comp, JPEGCompression):
+                jpeg.append(comp)
 
-        # 从池子中随机无放回抽样
-        selected_components = random.sample(self.component_pool, num_components)
+        geo = self.should_apply_stage(geo)
+        blur = self.should_apply_stage(blur)
+        resize = self.should_apply_stage(resize)
+        noise = self.should_apply_stage(noise)
+        color = self.should_apply_stage(color)
+        jpeg = self.should_apply_stage(jpeg)
 
-        # 随机打乱执行顺序，或者尝试blur→downsample→noise→jpeg
-        random.shuffle(selected_components)
+        # ===== 3. 组装顺序=====
+        ordered = []
 
-        # 依次应用选中的退化
-        for comp in selected_components:
+        # 几何阶段（可以打乱顺序）
+        if geo:
+            random.shuffle(geo)
+            ordered += geo
+
+        # 后面顺序固定，但可以“是否存在”
+        if blur:
+            ordered += blur
+        if resize:
+            ordered += resize
+        if noise:
+            ordered += noise
+        if color:
+            ordered += color
+        if jpeg:
+            ordered += jpeg
+
+        # ===== 4. 执行 =====
+        for comp in ordered:
             img = comp(img)
 
         return img
+
+    # ===== 2. 每个 stage 随机是否启用 =====
+    def should_apply_stage(self, stage_comps):
+        if len(stage_comps) == 0:
+            return []
+        # # 概率启用该 stage。这里和apply_prob冲突，所以取消
+        # if random.random() < 0.5:
+        #     return []
+        return stage_comps
 
 
 class HighOrderDegradationPipeline:
     """高阶退化流水线 (如 4 次退化)"""
 
-    def __init__(self, num_orders=4, apply_prob=(0.8, 0.8, 0.8, 0.8, 0.8)):
+    def __init__(self, num_orders=4, apply_prob=(0.8, 0.8, 0.8, 0.8, 0.6, 0.6, 0.8)):
         self.num_orders = num_orders
 
         # 初始化组件池 (每个组件也可以设置自带的触发概率)
@@ -269,20 +401,17 @@ class HighOrderDegradationPipeline:
             ResizeDownsampling(apply_prob=apply_prob[1]),
             Noise(apply_prob=apply_prob[2]),
             ColorDistortion(apply_prob=apply_prob[3]),
-            JPEGCompression(apply_prob=apply_prob[4])
+            JPEGCompression(apply_prob=apply_prob[4]),
+            GeometricTransform(apply_prob=apply_prob[5]),
+            RandomCrop(apply_prob=apply_prob[6])
         ]
 
     def process(self, img):
         current_img = img.copy()
-
         # 执行 4 次 (num_orders) 退化循环
         for order in range(self.num_orders):
-            # 实例化单次退化过程
             single_order_process = RandomDegradationOrder(self.pool)
-
-            # 应用单次退化
             current_img = single_order_process(current_img)
-
         return current_img
 
 
@@ -290,7 +419,7 @@ class HighOrderDegradationPipeline:
 # 4. 测试与运行
 # ==========================================
 if __name__ == "__main__":
-    test_img = read_image("../input/BG_CS_Abydos_10.jpg")
+    test_img = read_image("../../input/local_imgs/BG_CS_Abydos_10.jpg")
     pipeline = HighOrderDegradationPipeline(num_orders=4)
     degraded_img = pipeline.process(test_img)
     # cv2.imshow("Original", cv2.cvtColor(test_img, cv2.COLOR_RGB2BGR))
