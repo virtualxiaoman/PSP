@@ -1,14 +1,13 @@
 import os
 import numpy as np
-import cv2
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QButtonGroup, \
     QLineEdit, QStackedLayout, QListWidget, QApplication
 from PyQt6.QtCore import QThread, pyqtSignal
-from PyQt6.QtGui import QPixmap, QImage
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 
-from Tools.search_pic import SP
-from Tools.read_pic import read_image
+from src.search_pic import SP
+from src.utils.read_pic import read_image
 from UI.config import Button_css, Text_css, Input_css, Background_css, List_css
 
 Button_css = Button_css()

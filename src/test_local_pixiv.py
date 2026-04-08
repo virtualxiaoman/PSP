@@ -1,10 +1,8 @@
 import time
 import pandas as pd
 
-from Tools.read_pic import read_image, read_images, imgs2df
-from Tools.pic_util import HashPic
-from Tools.search_pic import SP
-from Tools.local_manager import demo_gal
+from src.utils.read_pic import read_image
+from src.search_pic import SP
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)

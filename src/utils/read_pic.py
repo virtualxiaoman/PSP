@@ -7,11 +7,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import torch
-from PIL import Image
 from torchvision import transforms
 
-from Tools.local_matcher import LocalMatcher
-from Tools.pic_util import HashPic
+from src.local_matcher import LocalMatcher
+from src.utils.pic_util import HashPic
 
 
 # # 在import cv2前设置，避免libpng warning: iCCP: known incorrect sRGB profile
@@ -40,7 +39,7 @@ def read_image(img_path, gray_pic=False, show_details=False):
     else:
         # img_gbr = cv2.imread(img_path)
         img_gbr = cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), -1)
-        img = cv2.cvtColor(img_gbr, cv2.COLOR_BGR2RGB)
+        img = cv2.cvtColor(img_gbr, cv2.COLOR_BGR2RGB)  # 转为RGB
 
     if show_details:
         print(img.shape)
@@ -123,8 +122,9 @@ def imgs2df(path, hash_type='phash', save_path=None, log_callback=None):
 
     # 加载模型
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"[imgs2df] 使用设备: {device}")
     model = LocalMatcher().to(device)
-    model.load_state_dict(torch.load("../assets/checkpoint_epoch_14.pth", map_location=device))
+    model.load_state_dict(torch.load("../../assets/checkpoint_epoch_14.pth", map_location=device))
     model.eval()
 
     file_list = []  # 图片绝对路径
@@ -207,6 +207,7 @@ def imgs2df(path, hash_type='phash', save_path=None, log_callback=None):
     elapsed_time = end_time - start_time
     # 计算每张图片的耗时
     elapsed_time_per_img = elapsed_time / file_list_length
+    # 测试 'F:/Picture/pixiv/BA' 总耗时: 292.83 秒, 每张图片耗时: 0.0668 秒
     print(f"[imgs2df] 总耗时: {elapsed_time:.2f} 秒, 每张图片耗时: {elapsed_time_per_img:.4f} 秒")
     return df
 
@@ -335,7 +336,7 @@ if __name__ == "__main__":
     # 加载模型
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = LocalMatcher().to(device)
-    model.load_state_dict(torch.load("../assets/checkpoint_epoch_14.pth", map_location=device))
+    model.load_state_dict(torch.load("../../assets/checkpoint_epoch_14.pth", map_location=device))
     model.eval()
     get_image_info_dl(img, device, model)  # 获取Dinov2特征向量
 

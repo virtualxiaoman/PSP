@@ -11,8 +11,8 @@
 # import os
 # import time
 #
-# from Tools.read_pic import read_imgs, read_image
-# from Tools.search_pic import SearchPic, CompressPic, DomainReducer
+# from src.read_pic import read_imgs, read_image
+# from src.search_pic import SearchPic, CompressPic, DomainReducer
 #
 # path = 'input'
 # # path = r'F:\Picture\blue archive'

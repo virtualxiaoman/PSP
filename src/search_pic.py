@@ -2,9 +2,9 @@ import numpy as np
 import os
 import pandas as pd
 
-from Tools.read_pic import imgs2df, read_image
-from Tools.pic_util import HashPic
-from Tools.local_manager import DFGalleryManager
+from src.utils.read_pic import imgs2df, read_image
+from src.utils.pic_util import HashPic
+from src.local_manager import DFGalleryManager
 
 
 class SP:

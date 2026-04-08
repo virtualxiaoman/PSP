@@ -1,8 +1,7 @@
 import time
 
-from Tools.read_pic import read_image, read_images, imgs2df
-from Tools.pic_util import HashPic
-from Tools.search_pic import SP
+from src.utils.read_pic import read_image
+from src.search_pic import SP
 
 path_origin = '../search/阿洛娜_原图.jpg'
 path_similar = '../search/阿洛娜_水印_重复.jpg'

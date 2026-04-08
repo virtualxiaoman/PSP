@@ -1,10 +1,8 @@
-from Tools.search_pic import SP
-from Tools.read_pic import read_images
+from src.search_pic import SP
+from src.utils.read_pic import read_images
 import time
 import cv2
 import random
-import os
-import logging
 
 
 # 防止Using cache found in C:\Users\HP/.cache\torch\hub\facebookresearch_dinov2_main的输出
@@ -166,7 +164,7 @@ def test3():
 
 
 def test4():
-    test_search_partial(path_local='F:/Picture/pixiv/BA', top_k=3)
+    test_search_partial(path_local='F:/Picture/pixiv/BA', top_k=5, max_num=100)
 
 
 def test5():
@@ -178,8 +176,8 @@ def test5():
     test_search_partial(path_local='E:/Py-Project/PSP/test_pictures', top_k=10, crop_ratio=0.8)
 
 
-test1()
+# test1()
 # test2()
 # test3()
-# test4()
+test4()
 # test5()
