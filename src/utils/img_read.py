@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import torch
 from torchvision import transforms
 
+from src.config.supported import SUPPORTED_IMG_FORMAT
 from src.local_matcher import LocalMatcher
 from src.utils.img_hash import HashPic
 
@@ -83,7 +84,7 @@ def read_images(path, gray_pic=False, show_details=False, max_num=-1):
         # print("文件:", files)
         for file in files:
             try:
-                if file.lower().endswith(('.jpg', '.png', '.jpeg')):
+                if file.lower().endswith(SUPPORTED_IMG_FORMAT):
                     # print("相对路径", os.path.join(root, file))
                     # print("绝对路径", os.path.abspath(os.path.join(root, file)))
 

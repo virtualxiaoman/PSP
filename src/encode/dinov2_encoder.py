@@ -22,7 +22,8 @@ class DINOv2Encoder:
     def _preprocess_single(self, img: np.ndarray):
         """处理单张图像，输出 (C, H, W) 的 numpy 数组"""
         # 基础校验
-        if img is None: raise ValueError("输入图像为空")
+        if img is None:
+            raise ValueError("输入图像为空")
 
         img = cv2.resize(img, (224, 224))
         img = img.astype(np.float32) / 255.0

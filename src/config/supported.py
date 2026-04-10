@@ -1,0 +1,1 @@
+SUPPORTED_IMG_FORMAT = ('.jpg', '.png', '.jpeg')

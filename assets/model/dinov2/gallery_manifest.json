@@ -1,0 +1,7 @@
+{
+    "LuoTianyi": {
+        "hash": "dd9642770df0e3da301bb293b168458f",
+        "faiss_path": "G:/Projects/py/PSP/assets/model/dinov2/LuoTianyi.faiss",
+        "pkl_path": "G:/Projects/py/PSP/assets/model/dinov2/LuoTianyi.pkl"
+    }
+}
