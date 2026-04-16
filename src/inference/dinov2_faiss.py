@@ -52,7 +52,7 @@ class DINOv2FAISSManager:
                 with open(self.manifest_path, "r", encoding="utf-8") as f:
                     return json.load(f)
             except Exception as e:
-                print(f"读取 manifest 失败，将重新创建: {e}")
+                print(f"读取 manifest 文件{self.manifest_path} 失败: {e}")
                 return {}
         return {}
 
