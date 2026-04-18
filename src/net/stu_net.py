@@ -3,7 +3,7 @@ from torch import nn as nn
 
 
 # 模型定义
-class DistillationStudent(nn.Module):
+class StuVit(nn.Module):
     def __init__(self, target_dim=256, teacher_dim=1024):
         super().__init__()
         self.backbone = timm.create_model('vit_small_patch16_224', pretrained=True, num_classes=0)

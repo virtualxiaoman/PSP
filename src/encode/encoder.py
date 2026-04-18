@@ -2,7 +2,12 @@ import torch
 import numpy as np
 import cv2
 import time
+import os
+from PIL import Image
+from torchvision import transforms
 
+from src.net.stu_net import StuVit
+from src.config.path import MODEL_DISTILL_DIR
 from src.utils.img_read import read_image
 
 
@@ -63,6 +68,56 @@ class DINOv2Encoder:
 
         # 4. 根据输入类型返回对应维度
         return final_features if is_list else final_features[0]  # 返回 (N, D) 或者 (D,)
+
+
+class ViTStuEncoder:
+    def __init__(self, model_name="student_vit_256d.pth"):
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+        # 1. 实例化网络并加载权重
+        self.model = StuVit(target_dim=256, teacher_dim=1024)
+        net_save_path = os.path.join(MODEL_DISTILL_DIR, model_name)
+
+        if os.path.exists(net_save_path):
+            self.model.load_state_dict(torch.load(net_save_path, map_location=self.device))
+        else:
+            raise FileNotFoundError(f"预训练模型文件未找到: {net_save_path}")
+
+        self.model.to(self.device)
+        self.model.eval()  # 开启评估模式，保证只返回 embed_256
+
+        # 2. 定义 ViT 所需的预处理流程
+        self.transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+
+    @torch.no_grad()
+    def encode(self, img_list, max_batch_size=256):
+        """兼容基类的接口：接收 NumPy/CV2 图片列表，返回特征矩阵 (N, D)"""
+        all_features = []
+
+        for i in range(0, len(img_list), max_batch_size):
+            batch_imgs = img_list[i: i + max_batch_size]
+            tensor_list = []
+
+            for img in batch_imgs:
+                # 如果是 cv2 读入的 (numpy BGR)，需转为 RGB 的 PIL Image 以适应 transforms
+                if isinstance(img, np.ndarray):
+                    if img.ndim == 3 and img.shape[2] == 3:
+                        img = img[:, :, ::-1]  # BGR to RGB
+                    img = Image.fromarray(img)
+
+                tensor_list.append(self.transform(img))
+
+            batch_tensor = torch.stack(tensor_list).to(self.device)
+
+            # 推理：eval模式下 forward 仅返回 embed_256
+            features = self.model(batch_tensor)
+            all_features.append(features.cpu().numpy())
+
+        return np.concatenate(all_features, axis=0)
 
 
 if __name__ == "__main__":
